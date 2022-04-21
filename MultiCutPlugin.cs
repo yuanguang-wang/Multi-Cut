@@ -1,7 +1,7 @@
 ﻿using Rhino;
 using System;
 
-namespace MultiSlicer
+namespace MultiCut
 {
     ///<summary>
     /// <para>Every RhinoCommon .rhp assembly must have one and only one PlugIn-derived
@@ -11,15 +11,15 @@ namespace MultiSlicer
     /// attributes in AssemblyInfo.cs (you might need to click "Project" ->
     /// "Show All Files" to see it in the "Solution Explorer" window).</para>
     ///</summary>
-    public class MultiSlicerPlugin : Rhino.PlugIns.PlugIn
+    public class MultiCutPlugin : Rhino.PlugIns.PlugIn
     {
-        public MultiSlicerPlugin()
+        public MultiCutPlugin()
         {
             Instance = this;
         }
 
-        ///<summary>Gets the only instance of the MultiSlicerPlugin plug-in.</summary>
-        public static MultiSlicerPlugin Instance { get; private set; }
+        ///<summary>Gets the only instance of the MultiCutPlugin plug-in.</summary>
+        public static MultiCutPlugin Instance { get; private set; }
 
         // You can override methods here to change the plug-in behavior on
         // loading and shut down, add options pages to the Rhino _Option command

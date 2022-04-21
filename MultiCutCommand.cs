@@ -1,19 +1,19 @@
 ﻿using Rhino;
 using System.Collections.Generic;
 
-namespace MultiSlicer
+namespace MultiCut
 {
-    public class MultiSlicerCommand : Rhino.Commands.Command
+    public class MultiCutCommand : Rhino.Commands.Command
     {
         #region ATTR
-        public MultiSlicerCommand()
+        public MultiCutCommand()
         {
             Instance = this;
         }
 
-        public static MultiSlicerCommand Instance { get; private set; }
+        public static MultiCutCommand Instance { get; private set; }
 
-        public override string EnglishName => "MultiSlicer";
+        public override string EnglishName => "MultiCut";
         #endregion
 
         protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
