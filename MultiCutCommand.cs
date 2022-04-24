@@ -13,31 +13,67 @@ namespace MultiCut
 
         public static MultiCutCommand Instance { get; private set; }
 
-        public override string EnglishName => "MultiCut";
+        public override string EnglishName => "mct";
         #endregion
 
         protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
         {
             Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject
             {
-                GeometryFilter = Rhino.DocObjects.ObjectType.EdgeFilter
+                GeometryFilter = Rhino.DocObjects.ObjectType.Brep
             };
-            getObject.SetCommandPrompt("Pick a edge to start");
+            getObject.SetCommandPrompt("Pick the brep to be cut");
             getObject.Get();
             Rhino.DocObjects.ObjRef objRef = getObject.Object(0);
-            Rhino.Geometry.BrepEdge edge = objRef.Edge();
             Rhino.Geometry.Brep brep = objRef.Brep();
 
-            if (brep == null | edge == null)
+            if (brep == null)
             {
                 RhinoApp.WriteLine("Brep is invalid");
                 return Rhino.Commands.Result.Failure;
             }
 
-            Rhino.Input.Custom.GetPoint getPoint = new Rhino.Input.Custom.GetPoint();
-            getPoint.DynamicDraw += null;
+            Rhino.Geometry.Collections.BrepEdgeList bEdges_List = brep.Edges;
 
-            doc.Objects.Add(brep);
+            Rhino.Input.Custom.GetPoint getFirstPoint = new Rhino.Input.Custom.GetPoint();
+            getFirstPoint.SetCommandPrompt("Pick the first point");
+            getFirstPoint.DynamicDraw += Core.DrawAutomaticPublisher;
+            getFirstPoint.Get();
+
+            if (getFirstPoint.CommandResult() != Rhino.Commands.Result.Success)
+            {
+                return getFirstPoint.CommandResult();
+            }  
+            
+            Rhino.Geometry.Point3d firstPoint = getFirstPoint.Point();
+            Rhino.Geometry.BrepEdge startEdge;
+            Rhino.Geometry.Vector3d planeZAxis;
+            Rhino.Geometry.Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
+
+            bool astralstep = true;
+            foreach (Rhino.Geometry.BrepEdge bEdge in bEdges_List)
+            {
+                bEdge.ClosestPoint(firstPoint, out double t);
+                Rhino.Geometry.Point3d projectedPoint = bEdge.PointAt(t);
+                double distance = projectedPoint.DistanceTo(firstPoint);
+                if (distance <= doc.ModelAbsoluteTolerance)
+                {
+                    astralstep = false;
+                    startEdge = bEdge;
+                    planeZAxis = bEdge.TangentAt(t);
+                    plane = new Rhino.Geometry.Plane(projectedPoint, planeZAxis);
+                    break;
+                }
+            }
+
+            if (astralstep)
+            {
+                RhinoApp.WriteLine("astral step");
+            }
+            else
+            {
+                RhinoApp.WriteLine("on the edge");                
+            }
 
 
             doc.Views.Redraw();
