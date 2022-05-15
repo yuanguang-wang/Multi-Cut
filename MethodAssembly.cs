@@ -10,23 +10,52 @@ namespace MultiCut
     {
     }
 
-    static class Core
+    class Core
     {
-        public static Rhino.Geometry.Curve[] IntersectionedCurves { get; set; }
-        public static bool DrawAutomatic(Rhino.Geometry.Brep brep, Rhino.Geometry.Plane plane)
-        {
-            Rhino.Geometry.Intersect.Intersection.BrepPlane(brep, plane, 0.01, out Rhino.Geometry.Curve[] intersectionCurves, out Rhino.Geometry.Point3d[] intersectionPoints);
-            IntersectionedCurves = intersectionCurves;
-            return true;
-        }
+        public Rhino.Geometry.Curve[] IntersectionedCurves { get; set; }
 
-        public static void DrawAutomaticPublisher(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        public bool ObjectCollecter(string commandPrompt, out Rhino.Geometry.Brep brep)
         {
-            foreach (Rhino.Geometry.Curve crv in IntersectionedCurves)
+            Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject
             {
-                e.Display.DrawCurve(crv, System.Drawing.Color.Red, 5);
+                GeometryFilter = Rhino.DocObjects.ObjectType.Brep 
+            };
+            getObject.SetCommandPrompt(commandPrompt);
+            getObject.Get();
+            if (getObject.CommandResult() != Rhino.Commands.Result.Success)
+            {
+                brep = null;
+                return false;
+            }
+            Rhino.DocObjects.ObjRef objRef = getObject.Object(0);
+            Rhino.Geometry.Brep brep2bpassed = objRef.Brep();
+            if (brep2bpassed != null)
+            {
+                brep = brep2bpassed;
+                return true;
+            }
+            else
+            {
+                brep = null;
+                return false;
             }
             
+        }
+
+    }
+
+    static class Failsafe
+    {
+        public static Rhino.Commands.Result Interruption(bool result)
+        {
+            if (!result)
+            {
+                return Rhino.Commands.Result.Failure;
+            }
+            else
+            {
+                return Rhino.Commands.Result.Nothing;
+            }
         }
     }
 }

@@ -18,26 +18,15 @@ namespace MultiCut
 
         protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
         {
-            Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject
-            {
-                GeometryFilter = Rhino.DocObjects.ObjectType.Brep
-            };
-            getObject.SetCommandPrompt("Pick the brep to be cut");
-            getObject.Get();
-            Rhino.DocObjects.ObjRef objRef = getObject.Object(0);
-            Rhino.Geometry.Brep brep = objRef.Brep();
-
-            if (brep == null)
-            {
-                RhinoApp.WriteLine("Brep is invalid");
-                return Rhino.Commands.Result.Failure;
-            }
+            MultiCut.Core core = new MultiCut.Core(); 
+            bool result = core.ObjectCollecter("Select the brep to be cut.", out Rhino.Geometry.Brep brep);
 
             Rhino.Geometry.Collections.BrepEdgeList bEdges_List = brep.Edges;
 
             Rhino.Input.Custom.GetPoint getFirstPoint = new Rhino.Input.Custom.GetPoint();
             getFirstPoint.SetCommandPrompt("Pick the first point");
-            getFirstPoint.DynamicDraw += Core.DrawAutomaticPublisher;
+            getFirstPoint.DynamicDraw += null;
+            //getFirstPoint.Tag = obj;
             getFirstPoint.Get();
 
             if (getFirstPoint.CommandResult() != Rhino.Commands.Result.Success)
@@ -68,7 +57,7 @@ namespace MultiCut
 
             if (astralstep)
             {
-                RhinoApp.WriteLine("astral step");
+                RhinoApp.WriteLine("[Placeholder] astral step");
             }
             else
             {
