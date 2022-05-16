@@ -40,7 +40,7 @@ namespace MultiCut
             Rhino.Geometry.Plane plane = doc.Views.ActiveView.ActiveViewport.ConstructionPlane();
 
             bool astralstep = true;
-            foreach (Rhino.Geometry.BrepEdge bEdge in bEdges_List)
+            foreach (Rhino.Geometry.BrepEdge bEdge in core.BEdges_List)
             {
                 bEdge.ClosestPoint(firstPoint, out double t);
                 Rhino.Geometry.Point3d projectedPoint = bEdge.PointAt(t);
