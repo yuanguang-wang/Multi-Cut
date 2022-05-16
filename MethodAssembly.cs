@@ -12,9 +12,15 @@ namespace MultiCut
 
     class Core
     {
-        public Rhino.Geometry.Curve[] IntersectionedCurves { get; set; }
+        #region ATTR
+        public Rhino.Geometry.Curve[] CutterCrvs { get; set; }
+        public Rhino.Geometry.Brep BrepSource { get; set; }
+        public List<Rhino.Geometry.Point3d> Pts_List { get; set; }
+        public Rhino.Geometry.Collections.BrepEdgeList BEdges_List { get; set; }
+    
+        #endregion
 
-        public bool ObjectCollecter(string commandPrompt, out Rhino.Geometry.Brep brep)
+        public bool ObjectCollecter(string commandPrompt)
         {
             Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject
             {
@@ -24,19 +30,18 @@ namespace MultiCut
             getObject.Get();
             if (getObject.CommandResult() != Rhino.Commands.Result.Success)
             {
-                brep = null;
                 return false;
             }
             Rhino.DocObjects.ObjRef objRef = getObject.Object(0);
-            Rhino.Geometry.Brep brep2bpassed = objRef.Brep();
-            if (brep2bpassed != null)
+            Rhino.Geometry.Brep brep2bPassed = objRef.Brep();
+            if (brep2bPassed != null)
             {
-                brep = brep2bpassed;
+                this.BrepSource = brep2bPassed;
+                this.BEdges_List = brep2bPassed.Edges;
                 return true;
             }
             else
             {
-                brep = null;
                 return false;
             }
             

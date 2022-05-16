@@ -19,9 +19,9 @@ namespace MultiCut
         protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
         {
             MultiCut.Core core = new MultiCut.Core(); 
-            bool result = core.ObjectCollecter("Select the brep to be cut.", out Rhino.Geometry.Brep brep);
+            bool result = core.ObjectCollecter("Select the brep to be cut.");
 
-            Rhino.Geometry.Collections.BrepEdgeList bEdges_List = brep.Edges;
+            
 
             Rhino.Input.Custom.GetPoint getFirstPoint = new Rhino.Input.Custom.GetPoint();
             getFirstPoint.SetCommandPrompt("Pick the first point");

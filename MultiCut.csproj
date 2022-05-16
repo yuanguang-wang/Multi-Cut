@@ -16,6 +16,18 @@
     <PackageReference Include="RhinoCommon" Version="7.18.22124.3001" IncludeAssets="compile;build" />
   </ItemGroup>
   
+  <ItemGroup>
+    <Reference Include="RhinoCommon">
+      <HintPath>..\..\..\..\..\..\Program Files\Rhino 7\System\RhinoCommon.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Drawing" />
+    <Reference Include="System" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove="System.Drawing" />
+    <None Remove="System" />
+  </ItemGroup>
   <PropertyGroup Condition="$(Configuration) == 'Debug' AND $([MSBuild]::IsOSPlatform(Windows))">
     <StartProgram>C:\Program Files\Rhino 7\System\Rhino.exe</StartProgram>
     <StartArguments></StartArguments>

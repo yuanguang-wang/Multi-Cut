@@ -4,13 +4,9 @@ import System
 import rhinoscriptsyntax as rs
 
 def test_command():
-    brep = []
-    objid = rs.GetObjects()
-    for i in range(len(objid)):
-        brep.append(rs.coercebrep(objid[i]))
-        print(brep[i])
-
-    #brep[0].Trim(brep[1],0.1)
+    gp = Rhino.Input.Custom.GetPoint()
+    gp.EnableCurveSnapArrow(True,False)
+    gp.Get()
     
     sc.doc.Views.Redraw()
 
