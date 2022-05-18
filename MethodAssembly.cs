@@ -10,18 +10,51 @@ namespace MultiCut
     {
     }
 
-    class Core
+    class CoreBase
     {
         #region ATTR
-        public Rhino.Geometry.Curve[] CutterCrvs { get; set; }
-        public Rhino.Geometry.Brep BrepSource { get; set; }
-        public List<Rhino.Geometry.Point3d> Pts_List { get; set; }
-        public Rhino.Geometry.Collections.BrepEdgeList BEdges_List { get; set; }
-        public Rhino.RhinoDoc CurrentDoc { get; set; }
-        public Rhino.Geometry.BrepEdge BEdgeInitiatedTarget { get; set; }
-        public Rhino.Geometry.Plane PlaneCutter { get; set; }
+        protected Rhino.RhinoDoc CurrentDoc { get; set; }
+        protected Rhino.Geometry.Brep BrepSource { get; set; }
+        protected Rhino.Geometry.Collections.BrepEdgeList BEdges_List { get; set; }
+        protected Rhino.Geometry.Point3d CurrentPt { get; set; }
+        protected Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
 
         #endregion
+
+        protected bool InitiationEdgeFinder()
+        {
+            foreach (Rhino.Geometry.BrepEdge bEdge in BEdges_List)
+            {
+                bEdge.ClosestPoint(this.CurrentPt, out double t);
+                Rhino.Geometry.Point3d ptProjected = bEdge.PointAt(t);
+                // bEdgeTarget Finder //
+                if (ptProjected.DistanceTo(this.CurrentPt) < this.CurrentDoc.ModelAbsoluteTolerance)
+                {
+                    this.EdgeLocated = bEdge;
+                    break;
+                }
+
+            }
+            return true;
+        }
+    }
+    class Core : CoreBase
+    {
+        #region ATTR
+        public Rhino.Geometry.Curve[] CutterCrvs { get; set; }        
+        public Rhino.Geometry.Plane PlaneCutter { get; set; }
+        public List<Rhino.Geometry.Point3d> Pt_List { get; set; }
+        public new Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
+
+
+        #endregion
+
+        public Core(Rhino.RhinoDoc doc)
+        {
+            this.Pt_List = new List<Rhino.Geometry.Point3d>();
+            this.CurrentDoc = doc;
+            
+        }
 
         public bool ObjectCollecter(string commandPrompt)
         {
@@ -63,9 +96,7 @@ namespace MultiCut
         /// <returns>Curve: Intersected</returns>
         public bool CutterPlane()
         {
-            ;
-
-            int currentPtsNumber = this.Pts_List.Count();
+            int currentPtsNumber = this.Pt_List.Count();
 
             if (currentPtsNumber == 0)
             {
@@ -74,24 +105,25 @@ namespace MultiCut
             else if (currentPtsNumber == 1)
             {
                 Rhino.Geometry.Vector3d axis;
-                foreach (Rhino.Geometry.BrepEdge bEdge in BEdges_List)
+                base.CurrentPt = this.Pt_List[0];
+                base.InitiationEdgeFinder();
+                if (base.EdgeLocated != null)
                 {
-                    bEdge.ClosestPoint(this.Pts_List[0], out double t);
-                    Rhino.Geometry.Point3d ptProjected = bEdge.PointAt(t);
-                    // bEdgeTarget Finder //
-                    if (ptProjected.DistanceTo(this.Pts_List[0]) < this.CurrentDoc.ModelAbsoluteTolerance)
-                    {
-                        this.BEdgeInitiatedTarget = bEdge;
-                        break;
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    this.EdgeLocated = base.EdgeLocated;
+                    this.EdgeLocated.ClosestPoint(this.Pt_List[0], out double p);
+                    axis = this.EdgeLocated.TangentAt(p);
+                    this.PlaneCutter = new Rhino.Geometry.Plane(this.Pt_List[0], axis);
                 }
-                this.BEdgeInitiatedTarget.ClosestPoint(this.Pts_List[0], out double p);
-                axis = this.BEdgeInitiatedTarget.TangentAt(p);
-                this.PlaneCutter = new Rhino.Geometry.Plane(this.Pts_List[0], axis);
+                else
+                {
+                    // Placeholder //
+                }
+
+                
+
+
+
+
             }
             else if (currentPtsNumber == 2)
             {
@@ -117,18 +149,21 @@ namespace MultiCut
         }
     }
 
-    static class EventModerator
+    class EventModerator
     {
-        static public void CutByOnePtEventMod(object s, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        public Core CoreObj { get; set; }
+        public void CutByOnePtEventMod(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
         {
-            MultiCut.Core core = new Core();
-            core.Pts_List = new List<Rhino.Geometry.Point3d>();
-            core.Pts_List.Add(e.CurrentPoint);
-            core.CutterPlane();
-            foreach (Rhino.Geometry.Curve crv in core.CutterCrvs)
+            this.CoreObj.Pt_List.Add(e.CurrentPoint);
+            this.CoreObj.CutterPlane();
+            if (this.CoreObj.CutterCrvs != null)
             {
-                e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
+                foreach (Rhino.Geometry.Curve crv in this.CoreObj.CutterCrvs)
+                {
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
+                }
             }
+            
             
         }
     }

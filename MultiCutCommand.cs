@@ -18,17 +18,26 @@ namespace MultiCut
 
         protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
         {
-            MultiCut.Core core = new MultiCut.Core(); 
+            MultiCut.Core core = new MultiCut.Core(doc); 
+            MultiCut.EventModerator em = new MultiCut.EventModerator { CoreObj = core };
             bool result = core.ObjectCollecter("Select the brep to be cut.");
 
             
 
             Rhino.Input.Custom.GetPoint getFirstPoint = new Rhino.Input.Custom.GetPoint();
             getFirstPoint.SetCommandPrompt("Pick the first point");
+            while (true)
+            {
+                getFirstPoint.DynamicDraw += em.CutByOnePtEventMod;
+                getFirstPoint.Get();
+                if (getFirstPoint.CommandResult() == Rhino.Commands.Result.Success)
+                {
+                    break;
+                }
+            }
+            
 
-            getFirstPoint.DynamicDraw += MultiCut.EventModerator.CutByOnePtEventMod;
-
-            getFirstPoint.Get();
+            
 
             if (getFirstPoint.CommandResult() != Rhino.Commands.Result.Success)
             {
