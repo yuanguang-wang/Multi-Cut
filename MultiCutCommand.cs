@@ -26,16 +26,8 @@ namespace MultiCut
 
             Rhino.Input.Custom.GetPoint getFirstPoint = new Rhino.Input.Custom.GetPoint();
             getFirstPoint.SetCommandPrompt("Pick the first point");
-            while (true)
-            {
-                getFirstPoint.DynamicDraw += em.CutByOnePtEventMod;
-                getFirstPoint.Get();
-                if (getFirstPoint.CommandResult() == Rhino.Commands.Result.Success)
-                {
-                    break;
-                }
-            }
-            
+            getFirstPoint.DynamicDraw += em.CutByOnePtEventMod;
+            getFirstPoint.Get();
 
             
 
