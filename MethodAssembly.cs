@@ -16,7 +16,7 @@ namespace MultiCut
         protected Rhino.RhinoDoc CurrentDoc { get; set; }
         protected Rhino.Geometry.Brep BrepSource { get; set; }
         protected Rhino.Geometry.Collections.BrepEdgeList BEdges_List { get; set; }
-        protected Rhino.Geometry.Point3d CurrentPt { get; set; }
+        public Rhino.Geometry.Point3d CurrentPt { get; set; }
         protected Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
 
         #endregion
@@ -100,41 +100,22 @@ namespace MultiCut
             {
                 return false;
             }
-            else if (currentPtsNumber == 1)
+            else
             {
                 Rhino.Geometry.Vector3d axis;
-                CurrentPt = Pt_List[0];
                 InitiationEdgeFinder();
                 if (EdgeLocated != null)
                 {
-                    EdgeLocated.ClosestPoint(Pt_List[0], out double p);
+                    EdgeLocated.ClosestPoint(CurrentPt, out double p);
                     axis = EdgeLocated.TangentAt(p);
-                    PlaneCutter = new Rhino.Geometry.Plane(Pt_List[0], axis);
+                    PlaneCutter = new Rhino.Geometry.Plane(CurrentPt, axis);
                 }
                 else
                 {
                     // Placeholder //
                 }
-
-                
-
-
-
-
             }
-            else if (currentPtsNumber == 2)
-            {
 
-                
-            }
-            else if (currentPtsNumber == 3)
-            {
-                // Placeholder
-            }
-            else
-            {
-                // Placeholder
-            }
 
             Rhino.Geometry.Intersect.Intersection.BrepPlane(BrepSource,
                                                             PlaneCutter,
@@ -149,27 +130,24 @@ namespace MultiCut
     class EventModerator
     {
         public Core CoreObj { get; set; }
-        public void CutByOnePtEventMod(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
-        {
-            CoreObj.Pt_List.Add(e.CurrentPoint);
-            CoreObj.CutterPlane();
-            while (true)
-            {
 
-            }
+        public void Test(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        {
+            CoreObj.CurrentPt = e.Point;
+            CoreObj.CutterPlane();
+        }
+
+        public void CutByOnePtEventMod(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        {           
+
             if (CoreObj.CutterCrvs != null)
             {
                 foreach (Rhino.Geometry.Curve crv in CoreObj.CutterCrvs)
                 {
                     e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
                 }
-            }
-            else
-            {
-                e.Display.DrawPoint(e.CurrentPoint);
 
             }
-
 
         }
 
