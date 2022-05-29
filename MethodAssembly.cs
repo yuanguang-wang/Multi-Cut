@@ -44,7 +44,7 @@ namespace MultiCut
         public Rhino.Geometry.Curve[] CutterCrvs { get; set; }        
         public Rhino.Geometry.Plane PlaneCutter { get; set; }
         public List<Rhino.Geometry.Point3d> Pt_List { get; set; }
-
+        public bool CmdKey { get; set; }
         #endregion
 
         public Core(Rhino.RhinoDoc doc)
@@ -94,27 +94,21 @@ namespace MultiCut
         /// <returns>Curve: Intersected</returns>
         public bool CutterPlane()
         {
-            int currentPtsNumber = Pt_List.Count();
 
-            if (currentPtsNumber == 0)
+
+            Rhino.Geometry.Vector3d axis;
+            InitiationEdgeFinder();
+            if (EdgeLocated != null)
             {
-                return false;
+                EdgeLocated.ClosestPoint(CurrentPt, out double p);
+                axis = EdgeLocated.TangentAt(p);
+                PlaneCutter = new Rhino.Geometry.Plane(CurrentPt, axis);
             }
             else
             {
-                Rhino.Geometry.Vector3d axis;
-                InitiationEdgeFinder();
-                if (EdgeLocated != null)
-                {
-                    EdgeLocated.ClosestPoint(CurrentPt, out double p);
-                    axis = EdgeLocated.TangentAt(p);
-                    PlaneCutter = new Rhino.Geometry.Plane(CurrentPt, axis);
-                }
-                else
-                {
-                    // Placeholder //
-                }
+                // Placeholder //
             }
+            
 
 
             Rhino.Geometry.Intersect.Intersection.BrepPlane(BrepSource,
@@ -135,11 +129,25 @@ namespace MultiCut
         {
             CoreObj.CurrentPt = e.Point;
             CoreObj.CutterPlane();
+            if (e.ControlKeyDown)
+            {
+                CoreObj.CmdKey = true;
+            }
+            else
+            {
+                CoreObj.CmdKey = false;
+            }
         }
 
         public void CutByOnePtEventMod(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
-        {           
+        {
+            //CoreObj.CurrentPt = e.CurrentPoint;
+            //CoreObj.CutterPlane();
 
+            if (CoreObj.CmdKey == true)
+            {
+                e.Display.DrawPoint(e.CurrentPoint, System.Drawing.Color.Red);
+            }
             if (CoreObj.CutterCrvs != null)
             {
                 foreach (Rhino.Geometry.Curve crv in CoreObj.CutterCrvs)
@@ -155,6 +163,38 @@ namespace MultiCut
         {
             
         }
+    }
+
+    class GetFirstPoint : Rhino.Input.Custom.GetPoint
+    {
+        public Core CoreObj { get; set; }
+
+        public GetFirstPoint(Core coreobjpassed)
+        {
+            CoreObj = coreobjpassed;
+        }
+
+        //protected override void OnDynamicDraw(Rhino.Input.Custom.GetPointDrawEventArgs e)
+        //{
+        //    CoreObj.CurrentPt = e.CurrentPoint;
+        //    CoreObj.CutterPlane();
+
+        //    if (CoreObj.CutterCrvs != null)
+        //    {
+        //        Rhino.RhinoApp.WriteLine("triggered");
+        //        foreach (Rhino.Geometry.Curve crv in CoreObj.CutterCrvs)
+        //        {
+        //            e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
+        //        }
+
+        //    }
+        //    else
+        //    {
+        //        Rhino.RhinoApp.WriteLine("not triggered");
+        //    }
+        //    base.OnDynamicDraw(e);
+
+        //}
     }
 
     static class Failsafe
