@@ -123,9 +123,16 @@ namespace MultiCut
 
     class EventModerator
     {
-        public Core CoreObj { get; set; }
+        private readonly Core CoreObj;
+        private readonly Rhino.Input.Custom.GetPoint Gp;
 
-        public void Test(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
+        public EventModerator(Core coreobjPassed, Rhino.Input.Custom.GetPoint gpPassed)
+        {
+            CoreObj = coreobjPassed;
+            Gp = gpPassed;
+        }
+        
+        public void MouseMoveMod(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             CoreObj.CurrentPt = e.Point;
             CoreObj.CutterPlane();
@@ -141,8 +148,6 @@ namespace MultiCut
 
         public void CutByOnePtEventMod(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
         {
-            //CoreObj.CurrentPt = e.CurrentPoint;
-            //CoreObj.CutterPlane();
 
             if (CoreObj.CmdKey == true)
             {
@@ -173,28 +178,6 @@ namespace MultiCut
         {
             CoreObj = coreobjpassed;
         }
-
-        //protected override void OnDynamicDraw(Rhino.Input.Custom.GetPointDrawEventArgs e)
-        //{
-        //    CoreObj.CurrentPt = e.CurrentPoint;
-        //    CoreObj.CutterPlane();
-
-        //    if (CoreObj.CutterCrvs != null)
-        //    {
-        //        Rhino.RhinoApp.WriteLine("triggered");
-        //        foreach (Rhino.Geometry.Curve crv in CoreObj.CutterCrvs)
-        //        {
-        //            e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
-        //        }
-
-        //    }
-        //    else
-        //    {
-        //        Rhino.RhinoApp.WriteLine("not triggered");
-        //    }
-        //    base.OnDynamicDraw(e);
-
-        //}
     }
 
     static class Failsafe
