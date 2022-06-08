@@ -3,59 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Rhino.Display;
+using Rhino.Input.Custom;
 
 namespace MultiCut
 {
-    class MethodAssembly
+    internal class MethodAssembly
     {
+        // delegate placeholder
     }
 
-    class CoreBase
+    internal static class MethodBasic
     {
-        #region ATTR
-        protected Rhino.RhinoDoc CurrentDoc { get; set; }
-        protected Rhino.Geometry.Brep BrepSource { get; set; }
-        protected Rhino.Geometry.Collections.BrepEdgeList BEdges_List { get; set; }
-        public Rhino.Geometry.Point3d CurrentPt { get; set; }
-        protected Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
-
-        #endregion
-
-        protected bool InitiationEdgeFinder()
+        public static bool ObjectCollecter(string commandPrompt, 
+                                           out Rhino.Geometry.Brep brep2BPassed, 
+                                           out Rhino.Geometry.Collections.BrepEdgeList bEdgeList2Bpassed)
         {
-            foreach (Rhino.Geometry.BrepEdge bEdge in BEdges_List)
-            {
-                bEdge.ClosestPoint(this.CurrentPt, out double t);
-                Rhino.Geometry.Point3d ptProjected = bEdge.PointAt(t);
-                // bEdgeTarget Finder //
-                if (ptProjected.DistanceTo(this.CurrentPt) < this.CurrentDoc.ModelAbsoluteTolerance)
-                {
-                    this.EdgeLocated = bEdge;
-                    break;
-                }
-
-            }
-            return true;
-        }
-    }
-    class Core : CoreBase
-    {
-        #region ATTR
-        public Rhino.Geometry.Curve[] CutterCrvs { get; set; }        
-        public Rhino.Geometry.Plane PlaneCutter { get; set; }
-        public List<Rhino.Geometry.Point3d> Pt_List { get; set; }
-        public bool CmdKey { get; set; }
-        #endregion
-
-        public Core(Rhino.RhinoDoc doc)
-        {
-            this.Pt_List = new List<Rhino.Geometry.Point3d>();
-            this.CurrentDoc = doc;
-            
-        }
-
-        public bool ObjectCollecter(string commandPrompt)
-        {
+            brep2BPassed = null;
+            bEdgeList2Bpassed = null;
             Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject
             {
                 GeometryFilter = Rhino.DocObjects.ObjectType.Brep 
@@ -67,19 +32,39 @@ namespace MultiCut
                 return false;
             }
             Rhino.DocObjects.ObjRef objRef = getObject.Object(0);
-            Rhino.Geometry.Brep brep2bPassed = objRef.Brep();
-            if (brep2bPassed != null)
-            {
-                this.BrepSource = brep2bPassed;
-                this.BEdges_List = brep2bPassed.Edges;
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-            
+            brep2BPassed = objRef.Brep();
+            bEdgeList2Bpassed = brep2BPassed.Edges;
+            return brep2BPassed != null & bEdgeList2Bpassed != null;
         }
+    }
+
+    internal class Core
+    {
+        #region FIELD
+
+        private readonly Rhino.RhinoDoc currentDoc;
+        private readonly Rhino.Geometry.Brep brepSource;
+        private readonly Rhino.Geometry.Collections.BrepEdgeList bEdgeList;
+
+        #endregion
+        
+        #region ATTR
+        public Rhino.Geometry.Curve[] CutterCrvs { get; private set; }
+        private Rhino.Geometry.Plane PlaneCutter { get; set; }
+        public Rhino.Geometry.Point3d CurrentPt { get; set; }
+        private Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
+        public bool IsCmdKeyDown { get; set; }
+        public bool IsShiftKeyDown { get; set; }
+        
+        #endregion
+
+        public Core(Rhino.RhinoDoc doc)
+        {
+            this.currentDoc = doc;
+            Failsafe.IsBrepCollected = MethodBasic.ObjectCollecter("Select Brep to be Cut.", out this.brepSource, out this.bEdgeList);
+        }
+
+        
 
         public bool PointsCollector()
         {
@@ -88,20 +73,31 @@ namespace MultiCut
             return true;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns>Curve: Intersected</returns>
+        private bool InitiationEdgeFinder()
+        {
+            foreach (Rhino.Geometry.BrepEdge bEdge in bEdgeList)
+            {
+                bEdge.ClosestPoint(this.CurrentPt, out double t);
+                Rhino.Geometry.Point3d ptProjected = bEdge.PointAt(t);
+                // bEdgeTarget Finder //
+                if (!(ptProjected.DistanceTo(this.CurrentPt) < this.currentDoc.ModelAbsoluteTolerance)) 
+                {
+                    continue;
+                }
+                this.EdgeLocated = bEdge;
+                break;
+
+            }
+            return true;
+        }
         public bool CutterPlane()
         {
 
-
-            Rhino.Geometry.Vector3d axis;
             InitiationEdgeFinder();
             if (EdgeLocated != null)
             {
                 EdgeLocated.ClosestPoint(CurrentPt, out double p);
-                axis = EdgeLocated.TangentAt(p);
+                Rhino.Geometry.Vector3d axis = EdgeLocated.TangentAt(p);
                 PlaneCutter = new Rhino.Geometry.Plane(CurrentPt, axis);
             }
             else
@@ -111,77 +107,61 @@ namespace MultiCut
             
 
 
-            Rhino.Geometry.Intersect.Intersection.BrepPlane(BrepSource,
-                                                            PlaneCutter,
-                                                            CurrentDoc.ModelAbsoluteTolerance,
+            Rhino.Geometry.Intersect.Intersection.BrepPlane(this.brepSource,
+                                                            this.PlaneCutter,
+                                                            this.currentDoc.ModelAbsoluteTolerance,
                                                             out Rhino.Geometry.Curve[] intersecrtionCrvs,
                                                             out Rhino.Geometry.Point3d[] intersectionPts);
             CutterCrvs = intersecrtionCrvs;
             return true;
         }
     }
+    
 
-    class EventModerator
+    internal class GetPointTemplate : Rhino.Input.Custom.GetPoint
     {
-        private readonly Core CoreObj;
-        private readonly Rhino.Input.Custom.GetPoint Gp;
+        private readonly Core coreObj;
 
-        public EventModerator(Core coreobjPassed, Rhino.Input.Custom.GetPoint gpPassed)
+        public GetPointTemplate(Core coreobjPassed)
         {
-            CoreObj = coreobjPassed;
-            Gp = gpPassed;
-        }
-        
-        public void MouseMoveMod(object sender, Rhino.Input.Custom.GetPointMouseEventArgs e)
-        {
-            CoreObj.CurrentPt = e.Point;
-            CoreObj.CutterPlane();
-            if (e.ControlKeyDown)
-            {
-                CoreObj.CmdKey = true;
-            }
-            else
-            {
-                CoreObj.CmdKey = false;
-            }
+            coreObj = coreobjPassed;
         }
 
-        public void CutByOnePtEventMod(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
+        protected override void OnMouseMove(GetPointMouseEventArgs e)
         {
+            coreObj.CurrentPt = e.Point;
+            coreObj.CutterPlane();
+            coreObj.IsCmdKeyDown = e.ControlKeyDown;
+            coreObj.IsShiftKeyDown = e.ShiftKeyDown;
+            base.OnMouseMove(e);
+        }
 
-            if (CoreObj.CmdKey == true)
+        protected override void OnDynamicDraw(GetPointDrawEventArgs e)
+        {
+            if (coreObj.CutterCrvs != null)
             {
-                e.Display.DrawPoint(e.CurrentPoint, System.Drawing.Color.Red);
-            }
-            if (CoreObj.CutterCrvs != null)
-            {
-                foreach (Rhino.Geometry.Curve crv in CoreObj.CutterCrvs)
+                foreach (Rhino.Geometry.Curve crv in coreObj.CutterCrvs)
                 {
                     e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
                 }
-
             }
 
-        }
+            if (coreObj.IsCmdKeyDown)
+            {
+                e.Display.DrawPoint(e.CurrentPoint, System.Drawing.Color.Chartreuse);
+            }
 
-        private void CutOutside(object sender, Rhino.Input.Custom.GetPointDrawEventArgs e)
-        {
-            
-        }
-    }
-
-    class GetFirstPoint : Rhino.Input.Custom.GetPoint
-    {
-        public Core CoreObj { get; set; }
-
-        public GetFirstPoint(Core coreobjpassed)
-        {
-            CoreObj = coreobjpassed;
+            if (coreObj.IsShiftKeyDown)
+            {
+                e.Display.DrawPoint(e.CurrentPoint, System.Drawing.Color.Crimson);
+            }
+            base.OnDynamicDraw(e);
         }
     }
 
-    static class Failsafe
+    internal static class Failsafe
     {
+        public static bool IsBrepCollected { get; set; }
         public static Rhino.Commands.Result Interruption(bool result)
         {
             if (!result)
