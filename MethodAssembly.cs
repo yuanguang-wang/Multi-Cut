@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Rhino.Display;
-using Rhino.Input.Custom;
+using Rhino.Geometry;
+
 
 namespace MultiCut
 {
@@ -52,10 +50,11 @@ namespace MultiCut
         public Rhino.Geometry.Curve[] CutterCrvs { get; private set; }
         private Rhino.Geometry.Plane PlaneCutter { get; set; }
         public Rhino.Geometry.Point3d CurrentPt { get; set; }
-        private Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
+        private Rhino.Geometry.BrepEdge EdgeLocker { get; set; }
         public bool IsCmdKeyDown { get; set; }
         public bool IsShiftKeyDown { get; set; }
-        
+        public Rhino.DocObjects.ConstructionPlane CPlane { get; set; }
+
         #endregion
 
         public Core(Rhino.RhinoDoc doc)
@@ -64,16 +63,7 @@ namespace MultiCut
             Failsafe.IsBrepCollected = MethodBasic.ObjectCollecter("Select Brep to be Cut.", out this.brepSource, out this.bEdgeList);
         }
 
-        
-
-        public bool PointsCollector()
-        {
-            Rhino.Input.Custom.GetPoint gp = new Rhino.Input.Custom.GetPoint();
-            gp.Get();
-            return true;
-        }
-
-        private bool InitiationEdgeFinder()
+        private bool EdgeFinder()
         {
             foreach (Rhino.Geometry.BrepEdge bEdge in bEdgeList)
             {
@@ -84,20 +74,20 @@ namespace MultiCut
                 {
                     continue;
                 }
-                this.EdgeLocated = bEdge;
+                this.EdgeLocker = bEdge;
                 break;
 
             }
             return true;
         }
-        public bool CutterPlane()
-        {
 
-            InitiationEdgeFinder();
-            if (EdgeLocated != null)
+        public bool PlaneGenerator()
+        {
+            this.EdgeFinder();
+            if (EdgeLocker != null)
             {
-                EdgeLocated.ClosestPoint(CurrentPt, out double p);
-                Rhino.Geometry.Vector3d axis = EdgeLocated.TangentAt(p);
+                EdgeLocker.ClosestPoint(CurrentPt, out double p);
+                Rhino.Geometry.Vector3d axis = EdgeLocker.TangentAt(p);
                 PlaneCutter = new Rhino.Geometry.Plane(CurrentPt, axis);
             }
             else
@@ -115,6 +105,35 @@ namespace MultiCut
             CutterCrvs = intersecrtionCrvs;
             return true;
         }
+        
+        public bool CPlaneGenerator()
+        {
+            if (this.PlaneCutter == null | this.CutterCrvs == null)
+            {
+                return false;
+            }
+
+            this.CPlane = new Rhino.DocObjects.ConstructionPlane();
+            List<Rhino.Geometry.Point3d> cutterCrvVtxList = new List<Point3d>();
+            foreach (Rhino.Geometry.Curve crv in this.CutterCrvs)
+            {
+                cutterCrvVtxList.Add(crv.PointAtStart);
+                cutterCrvVtxList.Add(crv.PointAtEnd);
+            }
+            Rhino.Geometry.BoundingBox cutterBox = new BoundingBox(cutterCrvVtxList);
+            double spacing = cutterBox.Diagonal.Length;
+            if (this.PlaneCutter == null)
+            {
+                Rhino.RhinoApp.WriteLine("plane cutter not exist");
+                return false;
+            }
+            this.CPlane.Plane = this.PlaneCutter;
+            this.CPlane.ShowGrid = true;
+            this.CPlane.GridSpacing = spacing / 10;
+            this.CPlane.GridLineCount = 10;
+            this.CPlane.DepthBuffered = true;
+            return true;
+        }
     }
     
 
@@ -127,22 +146,24 @@ namespace MultiCut
             coreObj = coreobjPassed;
         }
 
-        protected override void OnMouseMove(GetPointMouseEventArgs e)
+        protected override void OnMouseMove(Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
             coreObj.CurrentPt = e.Point;
-            coreObj.CutterPlane();
+            coreObj.PlaneGenerator();
+            coreObj.CPlaneGenerator();
             coreObj.IsCmdKeyDown = e.ControlKeyDown;
             coreObj.IsShiftKeyDown = e.ShiftKeyDown;
             base.OnMouseMove(e);
         }
 
-        protected override void OnDynamicDraw(GetPointDrawEventArgs e)
+        protected override void OnDynamicDraw(Rhino.Input.Custom.GetPointDrawEventArgs e)
         {
             if (coreObj.CutterCrvs != null)
             {
                 foreach (Rhino.Geometry.Curve crv in coreObj.CutterCrvs)
                 {
                     e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
+                    e.Display.DrawConstructionPlane(coreObj.CPlane);
                 }
             }
 
