@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Rhino.Geometry;
+using Rhino.Display;
 
 
 namespace MultiCut
@@ -50,10 +50,12 @@ namespace MultiCut
         public Rhino.Geometry.Curve[] CutterCrvs { get; private set; }
         private Rhino.Geometry.Plane PlaneCutter { get; set; }
         public Rhino.Geometry.Point3d CurrentPt { get; set; }
-        private Rhino.Geometry.BrepEdge EdgeLocker { get; set; }
+        private Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
+        public List<Rhino.Geometry.BrepFace> FaceLocatedList { get; set; }
         public bool IsCmdKeyDown { get; set; }
         public bool IsShiftKeyDown { get; set; }
         public Rhino.DocObjects.ConstructionPlane CPlane { get; set; }
+        public List<Rhino.Geometry.Curve> IsocrvList { get; set; }
 
         #endregion
 
@@ -74,20 +76,36 @@ namespace MultiCut
                 {
                     continue;
                 }
-                this.EdgeLocker = bEdge;
+                this.EdgeLocated = bEdge;
                 break;
 
             }
             return true;
         }
 
+        private bool FaceFinder()
+        {
+            if (this.EdgeLocated == null)
+            {
+                return false;
+            }
+            this.FaceLocatedList = new List<Rhino.Geometry.BrepFace>();
+            int[] faceIndex = this.EdgeLocated.AdjacentFaces();
+            foreach (int index in faceIndex)
+            {
+                this.FaceLocatedList.Add(this.brepSource.Faces[index]);
+            }
+
+            return this.FaceLocatedList.Count != 0;
+        }
+
         public bool PlaneGenerator()
         {
             this.EdgeFinder();
-            if (EdgeLocker != null)
+            if (EdgeLocated != null)
             {
-                EdgeLocker.ClosestPoint(CurrentPt, out double p);
-                Rhino.Geometry.Vector3d axis = EdgeLocker.TangentAt(p);
+                EdgeLocated.ClosestPoint(CurrentPt, out double p);
+                Rhino.Geometry.Vector3d axis = EdgeLocated.TangentAt(p);
                 PlaneCutter = new Rhino.Geometry.Plane(CurrentPt, axis);
             }
             else
@@ -114,13 +132,13 @@ namespace MultiCut
             }
 
             this.CPlane = new Rhino.DocObjects.ConstructionPlane();
-            List<Rhino.Geometry.Point3d> cutterCrvVtxList = new List<Point3d>();
+            List<Rhino.Geometry.Point3d> cutterCrvVtxList = new List<Rhino.Geometry.Point3d>();
             foreach (Rhino.Geometry.Curve crv in this.CutterCrvs)
             {
                 cutterCrvVtxList.Add(crv.PointAtStart);
                 cutterCrvVtxList.Add(crv.PointAtEnd);
             }
-            Rhino.Geometry.BoundingBox cutterBox = new BoundingBox(cutterCrvVtxList);
+            Rhino.Geometry.BoundingBox cutterBox = new Rhino.Geometry.BoundingBox(cutterCrvVtxList);
             double spacing = cutterBox.Diagonal.Length;
             if (this.PlaneCutter == null)
             {
@@ -132,6 +150,24 @@ namespace MultiCut
             this.CPlane.GridSpacing = spacing / 10;
             this.CPlane.GridLineCount = 10;
             this.CPlane.DepthBuffered = true;
+            return true;
+        }
+
+        public bool IsocrvGenerator()
+        {
+            this.FaceFinder();
+            if (this.FaceLocatedList == null)
+            {
+                return false;
+            }
+            this.IsocrvList = new List<Rhino.Geometry.Curve>();
+            foreach (Rhino.Geometry.BrepFace bFace in this.FaceLocatedList)
+            {
+                bFace.ClosestPoint(this.CurrentPt, out double u, out double v);
+                this.IsocrvList.Add(bFace.IsoCurve(1,u));
+                this.IsocrvList.Add(bFace.IsoCurve(0,v));
+                
+            }
             return true;
         }
     }
@@ -151,6 +187,7 @@ namespace MultiCut
             coreObj.CurrentPt = e.Point;
             coreObj.PlaneGenerator();
             coreObj.CPlaneGenerator();
+            coreObj.IsocrvGenerator();
             coreObj.IsCmdKeyDown = e.ControlKeyDown;
             coreObj.IsShiftKeyDown = e.ShiftKeyDown;
             base.OnMouseMove(e);
@@ -158,12 +195,23 @@ namespace MultiCut
 
         protected override void OnDynamicDraw(Rhino.Input.Custom.GetPointDrawEventArgs e)
         {
+            Rhino.Display.DisplayMaterial mtl = new Rhino.Display.DisplayMaterial(System.Drawing.Color.Chartreuse);
             if (coreObj.CutterCrvs != null)
             {
+                e.Display.DepthMode = DepthMode.AlwaysInBack;
                 foreach (Rhino.Geometry.Curve crv in coreObj.CutterCrvs)
                 {
-                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 4);
-                    e.Display.DrawConstructionPlane(coreObj.CPlane);
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                    
+                }
+                e.Display.DrawConstructionPlane(coreObj.CPlane);
+                foreach (Rhino.Geometry.Curve crv in coreObj.IsocrvList)
+                {
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                }
+                foreach (Rhino.Geometry.BrepFace bFace in coreObj.FaceLocatedList)
+                {
+                    e.Display.DrawBrepShaded(Rhino.Geometry.Brep.TryConvertBrep(bFace),mtl);
                 }
             }
 
