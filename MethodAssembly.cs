@@ -59,11 +59,15 @@ namespace MultiCut
 
         #endregion
 
+        #region CTOR
         public Core(Rhino.RhinoDoc doc)
         {
             this.currentDoc = doc;
             Failsafe.IsBrepCollected = MethodBasic.ObjectCollecter("Select Brep to be Cut.", out this.brepSource, out this.bEdgeList);
         }
+        #endregion
+
+        #region MTHD
 
         private bool EdgeFinder()
         {
@@ -164,14 +168,17 @@ namespace MultiCut
             foreach (Rhino.Geometry.BrepFace bFace in this.FaceLocatedList)
             {
                 bFace.ClosestPoint(this.CurrentPt, out double u, out double v);
-                this.IsocrvList.Add(bFace.IsoCurve(1,u));
-                this.IsocrvList.Add(bFace.IsoCurve(0,v));
+                this.IsocrvList.AddRange(bFace.TrimAwareIsoCurve(1,u));
+                this.IsocrvList.AddRange(bFace.TrimAwareIsoCurve(0,v));
                 
             }
             return true;
         }
+        
+        #endregion
+
+        
     }
-    
 
     internal class GetPointTemplate : Rhino.Input.Custom.GetPoint
     {
@@ -195,23 +202,22 @@ namespace MultiCut
 
         protected override void OnDynamicDraw(Rhino.Input.Custom.GetPointDrawEventArgs e)
         {
-            Rhino.Display.DisplayMaterial mtl = new Rhino.Display.DisplayMaterial(System.Drawing.Color.Chartreuse);
+            Rhino.Display.DisplayMaterial mtl = new Rhino.Display.DisplayMaterial(Rhino.ApplicationSettings.AppearanceSettings.SelectedObjectColor, 0.5);
             if (coreObj.CutterCrvs != null)
             {
-                e.Display.DepthMode = DepthMode.AlwaysInBack;
                 foreach (Rhino.Geometry.Curve crv in coreObj.CutterCrvs)
                 {
-                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Black, 2);
                     
                 }
                 e.Display.DrawConstructionPlane(coreObj.CPlane);
                 foreach (Rhino.Geometry.Curve crv in coreObj.IsocrvList)
                 {
-                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 2);
                 }
                 foreach (Rhino.Geometry.BrepFace bFace in coreObj.FaceLocatedList)
                 {
-                    e.Display.DrawBrepShaded(Rhino.Geometry.Brep.TryConvertBrep(bFace),mtl);
+                    e.Display.DrawBrepShaded(bFace.DuplicateFace(false),mtl);
                 }
             }
 
