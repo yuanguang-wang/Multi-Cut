@@ -56,6 +56,8 @@ namespace MultiCut
         public bool IsShiftKeyDown { get; set; }
         public Rhino.DocObjects.ConstructionPlane CPlane { get; set; }
         public List<Rhino.Geometry.Curve> IsocrvList { get; set; }
+        public Rhino.Geometry.Point3d[] Cpt5 { get; private set; }
+        public Rhino.Geometry.Point3d[] Cpt3 { get; private set; }
 
         #endregion
 
@@ -101,6 +103,28 @@ namespace MultiCut
             }
 
             return this.FaceLocatedList.Count != 0;
+        }
+
+        public bool Cpt5Generator()
+        { 
+            if (this.EdgeLocated == null)
+            {
+                return false;
+            }
+            this.EdgeLocated.DivideByCount(20, true, out Rhino.Geometry.Point3d[] cptTemp);
+            this.Cpt5 = cptTemp;
+            return true;
+        }
+
+        public bool Cpt3Generator()
+        {
+            if (this.EdgeLocated == null)
+            {
+                return false;
+            }
+            this.EdgeLocated.DivideByCount(9, true, out Rhino.Geometry.Point3d[] cptTemp);
+            this.Cpt3 = cptTemp;
+            return true;
         }
 
         public bool PlaneGenerator()
@@ -195,6 +219,7 @@ namespace MultiCut
             coreObj.PlaneGenerator();
             coreObj.CPlaneGenerator();
             coreObj.IsocrvGenerator();
+            coreObj.Cpt5Generator();
             coreObj.IsCmdKeyDown = e.ControlKeyDown;
             coreObj.IsShiftKeyDown = e.ShiftKeyDown;
             base.OnMouseMove(e);
@@ -207,13 +232,12 @@ namespace MultiCut
             {
                 foreach (Rhino.Geometry.Curve crv in coreObj.CutterCrvs)
                 {
-                    e.Display.DrawCurve(crv, System.Drawing.Color.Black, 2);
-                    
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
                 }
                 e.Display.DrawConstructionPlane(coreObj.CPlane);
                 foreach (Rhino.Geometry.Curve crv in coreObj.IsocrvList)
                 {
-                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 2);
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
                 }
                 foreach (Rhino.Geometry.BrepFace bFace in coreObj.FaceLocatedList)
                 {
@@ -223,13 +247,40 @@ namespace MultiCut
 
             if (coreObj.IsCmdKeyDown)
             {
-                e.Display.DrawPoint(e.CurrentPoint, System.Drawing.Color.Chartreuse);
+                
+                if (coreObj.Cpt5 != null)
+                {
+                    this.AddConstructionPoint(coreObj.Cpt5[3]);
+                    e.Display.DrawPoints(coreObj.Cpt5, PointStyle.Clover, 5, System.Drawing.Color.Fuchsia);
+                    Rhino.RhinoApp.WriteLine("5add");
+                }
+                else
+                {
+                    Rhino.RhinoApp.WriteLine("5null");
+                }
+            }
+            else
+            {
+                this.ClearConstructionPoints();
             }
 
             if (coreObj.IsShiftKeyDown)
             {
-                e.Display.DrawPoint(e.CurrentPoint, System.Drawing.Color.Crimson);
+                coreObj.Cpt3Generator();
+                if (coreObj.Cpt3 != null)
+                {
+                    this.AddConstructionPoints(coreObj.Cpt3);
+                }
+                else
+                {
+                    Rhino.RhinoApp.WriteLine("3null");
+                }
             }
+            else
+            {
+                this.ClearConstructionPoints();
+            }
+            
             base.OnDynamicDraw(e);
         }
     }
