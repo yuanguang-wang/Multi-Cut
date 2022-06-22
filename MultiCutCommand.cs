@@ -24,11 +24,12 @@ namespace MultiCut
                 RhinoApp.WriteLine("Brep is invalid, operation could be be done.");
                 return Rhino.Commands.Result.Failure;
             }
-            Rhino.Input.Custom.GetPoint getFirstPoint = new GetPointTemplate(core);
+            MultiCut.GetPointTemplate getFirstPoint = new GetPointTemplate(core);
 
             
 
             getFirstPoint.SetCommandPrompt("Pick the first point");
+            
             getFirstPoint.Get();
 
             

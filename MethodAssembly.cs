@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Rhino.Display;
 
 
 namespace MultiCut
@@ -111,7 +110,7 @@ namespace MultiCut
             {
                 return false;
             }
-            this.EdgeLocated.DivideByCount(20, true, out Rhino.Geometry.Point3d[] cptTemp);
+            this.EdgeLocated.DivideByCount(3, true, out Rhino.Geometry.Point3d[] cptTemp);
             this.Cpt5 = cptTemp;
             return true;
         }
@@ -228,6 +227,7 @@ namespace MultiCut
         protected override void OnDynamicDraw(Rhino.Input.Custom.GetPointDrawEventArgs e)
         {
             Rhino.Display.DisplayMaterial mtl = new Rhino.Display.DisplayMaterial(Rhino.ApplicationSettings.AppearanceSettings.SelectedObjectColor, 0.5);
+            
             if (coreObj.CutterCrvs != null)
             {
                 foreach (Rhino.Geometry.Curve crv in coreObj.CutterCrvs)
@@ -250,9 +250,10 @@ namespace MultiCut
                 
                 if (coreObj.Cpt5 != null)
                 {
-                    this.AddConstructionPoint(coreObj.Cpt5[3]);
-                    e.Display.DrawPoints(coreObj.Cpt5, PointStyle.Clover, 5, System.Drawing.Color.Fuchsia);
-                    Rhino.RhinoApp.WriteLine("5add");
+                    this.AddConstructionPoints(coreObj.Cpt5);
+                    this.EnableCurveSnapArrow(true,false);
+                    e.Display.DrawPoints(coreObj.Cpt5, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.OrangeRed);
+                    
                 }
                 else
                 {
@@ -261,7 +262,8 @@ namespace MultiCut
             }
             else
             {
-                this.ClearConstructionPoints();
+                this.EnableCurveSnapArrow(false,false);
+                //this.ClearConstructionPoints();
             }
 
             if (coreObj.IsShiftKeyDown)
