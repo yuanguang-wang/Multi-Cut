@@ -18,13 +18,13 @@ namespace MultiCut
 
         protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
         {
-            MultiCut.Core core = new MultiCut.Core(doc);
+            Core core = new Core(doc);
             if (!Failsafe.IsBrepCollected)
             {
                 RhinoApp.WriteLine("Brep is invalid, operation could be be done.");
                 return Rhino.Commands.Result.Failure;
             }
-            MultiCut.GetPointTemplate getFirstPoint = new GetPointTemplate(core);
+            GetPointTemplate getFirstPoint = new GetPointTemplate(core);
 
             
 

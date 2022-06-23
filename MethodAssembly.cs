@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Rhino.Geometry;
 
 
 namespace MultiCut
@@ -13,7 +14,7 @@ namespace MultiCut
     internal static class MethodBasic
     {
         public static bool ObjectCollecter(string commandPrompt, 
-                                           out Rhino.Geometry.Brep brep2BPassed, 
+                                           out Brep brep2BPassed, 
                                            out Rhino.Geometry.Collections.BrepEdgeList bEdgeList2Bpassed)
         {
             brep2BPassed = null;
@@ -33,6 +34,29 @@ namespace MultiCut
             bEdgeList2Bpassed = brep2BPassed.Edges;
             return brep2BPassed != null & bEdgeList2Bpassed != null;
         }
+        public static bool PointOnCrvDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        {
+            crv.ClosestPoint(pt, out double t);
+            Point3d ptProjected = crv.PointAt(t);
+            return ptProjected.DistanceTo(pt) < doc.ModelAbsoluteTolerance;
+        }
+
+        public static bool PointOverlapeDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc, out List<Point3d> ptList)
+        {
+            ptList = new List<Point3d>();
+            double disStart = pt.DistanceTo(crv.PointAtStart);
+            if (disStart > doc.ModelAbsoluteTolerance)
+            {
+                ptList.Add(crv.PointAtStart);
+            }
+
+            double disEnd = pt.DistanceTo(crv.PointAtEnd);
+            if (disEnd > doc.ModelAbsoluteTolerance)
+            {
+                ptList.Add(crv.PointAtEnd);
+            }
+            return true;
+        }
     }
 
     internal class Core
@@ -40,23 +64,25 @@ namespace MultiCut
         #region FIELD
 
         private readonly Rhino.RhinoDoc currentDoc;
-        private readonly Rhino.Geometry.Brep brepSource;
+        private readonly Brep brepSource;
         private readonly Rhino.Geometry.Collections.BrepEdgeList bEdgeList;
 
         #endregion
         
         #region ATTR
-        public Rhino.Geometry.Curve[] CutterCrvs { get; private set; }
-        private Rhino.Geometry.Plane PlaneCutter { get; set; }
-        public Rhino.Geometry.Point3d CurrentPt { get; set; }
-        private Rhino.Geometry.BrepEdge EdgeLocated { get; set; }
-        public List<Rhino.Geometry.BrepFace> FaceLocatedList { get; set; }
-        public bool IsCmdKeyDown { get; set; }
+        public Curve[] CutterCrvs { get; private set; }
+        private Plane PlaneCutter { get; set; }
+        public Point3d CurrentPt { get; set; }
+        private BrepEdge EdgeFound { get; set; }
+        public List<BrepFace> FaceFoundList { get; set; }
         public bool IsShiftKeyDown { get; set; }
-        public Rhino.DocObjects.ConstructionPlane CPlane { get; set; }
-        public List<Rhino.Geometry.Curve> IsocrvList { get; set; }
-        public Rhino.Geometry.Point3d[] Cpt5 { get; private set; }
-        public Rhino.Geometry.Point3d[] Cpt3 { get; private set; }
+        public Rhino.DocObjects.ConstructionPlane CutPlane { get; set; }
+        public List<Curve> IsocrvList { get; set; }
+        public List<Curve> CplcrvList { get; set; }
+        public List<Curve> OctopusArmList { get; set; }
+        public List<List<Point3d>> OctopusEndList { get; set; }
+        public List<string> OctopusNameList { get; set; }
+        public Point3d[] CptList { get; private set; }
 
         #endregion
 
@@ -64,76 +90,63 @@ namespace MultiCut
         public Core(Rhino.RhinoDoc doc)
         {
             this.currentDoc = doc;
+            this.OctopusArmList = new List<Curve>();
+            this.OctopusEndList = new List<List<Point3d>>();
+            this.OctopusNameList = new List<string>();
             Failsafe.IsBrepCollected = MethodBasic.ObjectCollecter("Select Brep to be Cut.", out this.brepSource, out this.bEdgeList);
         }
         #endregion
 
         #region MTHD
-
         private bool EdgeFinder()
         {
-            foreach (Rhino.Geometry.BrepEdge bEdge in bEdgeList)
+            foreach (BrepEdge bEdge in bEdgeList)
             {
+                bool isPointOnEdge = MethodBasic.PointOnCrvDetector(bEdge, this.CurrentPt, this.currentDoc);
                 bEdge.ClosestPoint(this.CurrentPt, out double t);
-                Rhino.Geometry.Point3d ptProjected = bEdge.PointAt(t);
+                Point3d ptProjected = bEdge.PointAt(t);
                 // bEdgeTarget Finder //
-                if (!(ptProjected.DistanceTo(this.CurrentPt) < this.currentDoc.ModelAbsoluteTolerance)) 
+                if (isPointOnEdge) 
                 {
-                    continue;
+                    this.EdgeFound = bEdge;
+                    break;
                 }
-                this.EdgeLocated = bEdge;
-                break;
-
             }
             return true;
         }
-
         private bool FaceFinder()
         {
-            if (this.EdgeLocated == null)
+            if (this.EdgeFound == null)
             {
                 return false;
             }
-            this.FaceLocatedList = new List<Rhino.Geometry.BrepFace>();
-            int[] faceIndex = this.EdgeLocated.AdjacentFaces();
+            this.FaceFoundList = new List<BrepFace>();
+            int[] faceIndex = this.EdgeFound.AdjacentFaces();
             foreach (int index in faceIndex)
             {
-                this.FaceLocatedList.Add(this.brepSource.Faces[index]);
+                this.FaceFoundList.Add(this.brepSource.Faces[index]);
             }
 
-            return this.FaceLocatedList.Count != 0;
+            return this.FaceFoundList.Count != 0;
         }
-
-        public bool Cpt5Generator()
-        { 
-            if (this.EdgeLocated == null)
-            {
-                return false;
-            }
-            this.EdgeLocated.DivideByCount(3, true, out Rhino.Geometry.Point3d[] cptTemp);
-            this.Cpt5 = cptTemp;
-            return true;
-        }
-
-        public bool Cpt3Generator()
+        public bool CptGenerator()
         {
-            if (this.EdgeLocated == null)
+            if (this.EdgeFound == null)
             {
                 return false;
             }
-            this.EdgeLocated.DivideByCount(9, true, out Rhino.Geometry.Point3d[] cptTemp);
-            this.Cpt3 = cptTemp;
+            this.EdgeFound.DivideByCount(9, true, out Point3d[] cptTemp);
+            this.CptList = cptTemp;
             return true;
         }
-
         public bool PlaneGenerator()
         {
             this.EdgeFinder();
-            if (EdgeLocated != null)
+            if (EdgeFound != null)
             {
-                EdgeLocated.ClosestPoint(CurrentPt, out double p);
-                Rhino.Geometry.Vector3d axis = EdgeLocated.TangentAt(p);
-                PlaneCutter = new Rhino.Geometry.Plane(CurrentPt, axis);
+                EdgeFound.ClosestPoint(CurrentPt, out double p);
+                Vector3d axis = EdgeFound.TangentAt(p);
+                PlaneCutter = new Plane(CurrentPt, axis);
             }
             else
             {
@@ -145,59 +158,154 @@ namespace MultiCut
             Rhino.Geometry.Intersect.Intersection.BrepPlane(this.brepSource,
                                                             this.PlaneCutter,
                                                             this.currentDoc.ModelAbsoluteTolerance,
-                                                            out Rhino.Geometry.Curve[] intersecrtionCrvs,
-                                                            out Rhino.Geometry.Point3d[] intersectionPts);
+                                                            out Curve[] intersecrtionCrvs,
+                                                            out Point3d[] intersectionPts);
             CutterCrvs = intersecrtionCrvs;
             return true;
         }
-        
-        public bool CPlaneGenerator()
+        public bool CutPlaneGenerator()
         {
             if (this.PlaneCutter == null | this.CutterCrvs == null)
             {
                 return false;
             }
 
-            this.CPlane = new Rhino.DocObjects.ConstructionPlane();
-            List<Rhino.Geometry.Point3d> cutterCrvVtxList = new List<Rhino.Geometry.Point3d>();
-            foreach (Rhino.Geometry.Curve crv in this.CutterCrvs)
+            this.CutPlane = new Rhino.DocObjects.ConstructionPlane();
+            List<Point3d> cutterCrvVtxList = new List<Point3d>();
+            foreach (Curve crv in this.CutterCrvs)
             {
                 cutterCrvVtxList.Add(crv.PointAtStart);
                 cutterCrvVtxList.Add(crv.PointAtEnd);
             }
-            Rhino.Geometry.BoundingBox cutterBox = new Rhino.Geometry.BoundingBox(cutterCrvVtxList);
+            BoundingBox cutterBox = new BoundingBox(cutterCrvVtxList);
             double spacing = cutterBox.Diagonal.Length;
             if (this.PlaneCutter == null)
             {
                 Rhino.RhinoApp.WriteLine("plane cutter not exist");
                 return false;
             }
-            this.CPlane.Plane = this.PlaneCutter;
-            this.CPlane.ShowGrid = true;
-            this.CPlane.GridSpacing = spacing / 10;
-            this.CPlane.GridLineCount = 10;
-            this.CPlane.DepthBuffered = true;
+            this.CutPlane.Plane = this.PlaneCutter;
+            this.CutPlane.ShowGrid = true;
+            this.CutPlane.GridSpacing = spacing / 1;
+            this.CutPlane.GridLineCount = 1;
+            this.CutPlane.DepthBuffered = true;
+            this.CutPlane.ShowAxes = false;
+            this.CutPlane.ShowZAxis = false;
+
             return true;
         }
-
         public bool IsocrvGenerator()
         {
             this.FaceFinder();
-            if (this.FaceLocatedList == null)
+            if (this.FaceFoundList == null)
             {
                 return false;
             }
-            this.IsocrvList = new List<Rhino.Geometry.Curve>();
-            foreach (Rhino.Geometry.BrepFace bFace in this.FaceLocatedList)
+            this.IsocrvList = new List<Curve>();
+            foreach (BrepFace bFace in this.FaceFoundList)
             {
                 bFace.ClosestPoint(this.CurrentPt, out double u, out double v);
-                this.IsocrvList.AddRange(bFace.TrimAwareIsoCurve(1,u));
-                this.IsocrvList.AddRange(bFace.TrimAwareIsoCurve(0,v));
-                
+                Curve[] isou = bFace.TrimAwareIsoCurve(1, u);
+                Curve[] isov = bFace.TrimAwareIsoCurve(0, v);
+                this.IsocrvList.AddRange(isou);
+                this.IsocrvList.AddRange(isov);
+                foreach (Curve iso in isou)
+                {
+                    bool isPointOnIso = MethodBasic.PointOnCrvDetector(iso, this.CurrentPt, this.currentDoc);
+                    if (isPointOnIso)
+                    {
+                        this.OctopusArmList.Add(iso);
+                        this.OctopusNameList.Add(OctopusType.ISOU.ToString());
+                        MethodBasic.PointOverlapeDetector(iso,
+                                                          this.CurrentPt, 
+                                                          this.currentDoc, 
+                                                          out List < Point3d > ptList);
+                        this.OctopusEndList.Add(ptList);
+                    }
+                }
+                foreach (Curve iso in isov)
+                {
+                    bool isPointOnIso = MethodBasic.PointOnCrvDetector(iso, this.CurrentPt, this.currentDoc);
+                    if (isPointOnIso)
+                    {
+                        this.OctopusArmList.Add(iso);
+                        this.OctopusNameList.Add(OctopusType.ISOV.ToString());
+                        MethodBasic.PointOverlapeDetector(iso,
+                            this.CurrentPt, 
+                            this.currentDoc, 
+                            out List <Point3d> ptList);
+                        this.OctopusEndList.Add(ptList);
+                    }
+                }
             }
             return true;
         }
-        
+        public bool CplcrvGenerator()
+        {
+            this.CplcrvList = new List<Curve>();
+            Plane currentCpl =
+                this.currentDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
+            if (currentCpl == Plane.Unset)
+            {
+                return false;
+            }
+            Vector3d[] cplAxis = new[] { currentCpl.XAxis, currentCpl.YAxis, currentCpl.ZAxis };
+            if (this.FaceFoundList == null || this.CurrentPt == null)
+            {
+                return false;
+            }
+            Plane[] cplPlanes = new[]
+            {
+                new Plane(this.CurrentPt, cplAxis[0]),
+                new Plane(this.CurrentPt, cplAxis[1]),
+                new Plane(this.CurrentPt, cplAxis[2])
+            };
+            foreach (BrepFace bFace in this.FaceFoundList)
+            {
+                foreach (Plane cpl in cplPlanes)
+                {
+                    Rhino.Geometry.Intersect.Intersection.BrepPlane(bFace.DuplicateFace(false),
+                        cpl,
+                        this.currentDoc.ModelAbsoluteTolerance,
+                        out Curve[] intersecrtionCrvs,
+                        out Point3d[] intersectionPts);
+                    
+                    this.CplcrvList.AddRange(intersecrtionCrvs);
+                }
+            }
+            return true;
+        }
+        public bool WplcrvGenerator()
+        {
+            Plane[] wplPlanes = new[]
+            {
+                Plane.WorldXY, //z
+                Plane.WorldYZ, //x
+                Plane.WorldZX  //y
+            };
+            foreach (BrepFace bFace in this.FaceFoundList)
+            {
+                foreach (Plane cpl in wplPlanes)
+                {
+                    Rhino.Geometry.Intersect.Intersection.BrepPlane(bFace.DuplicateFace(false),
+                        cpl,
+                        this.currentDoc.ModelAbsoluteTolerance,
+                        out Curve[] intersecrtionCrvs,
+                        out Point3d[] intersectionPts);
+                    
+                    this.CplcrvList.AddRange(intersecrtionCrvs);
+                }
+            }
+            return true;
+        }
+
+        public bool OctopusCollector()
+        {
+            
+            return true;
+        }
+
+
         #endregion
 
         
@@ -214,13 +322,14 @@ namespace MultiCut
 
         protected override void OnMouseMove(Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
+            coreObj.IsShiftKeyDown = e.ShiftKeyDown;
             coreObj.CurrentPt = e.Point;
             coreObj.PlaneGenerator();
-            coreObj.CPlaneGenerator();
+            coreObj.CutPlaneGenerator();
             coreObj.IsocrvGenerator();
-            coreObj.Cpt5Generator();
-            coreObj.IsCmdKeyDown = e.ControlKeyDown;
-            coreObj.IsShiftKeyDown = e.ShiftKeyDown;
+            coreObj.CplcrvGenerator();
+            coreObj.WplcrvGenerator();
+            
             base.OnMouseMove(e);
         }
 
@@ -230,52 +339,33 @@ namespace MultiCut
             
             if (coreObj.CutterCrvs != null)
             {
-                foreach (Rhino.Geometry.Curve crv in coreObj.CutterCrvs)
+                foreach (Curve crv in coreObj.CutterCrvs)
                 {
                     e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
                 }
-                e.Display.DrawConstructionPlane(coreObj.CPlane);
-                foreach (Rhino.Geometry.Curve crv in coreObj.IsocrvList)
+                e.Display.DrawConstructionPlane(coreObj.CutPlane);
+                foreach (Curve crv in coreObj.IsocrvList)
                 {
                     e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
                 }
-                foreach (Rhino.Geometry.BrepFace bFace in coreObj.FaceLocatedList)
+
+                foreach (Curve crv in coreObj.CplcrvList)
+                {
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                }
+                foreach (BrepFace bFace in coreObj.FaceFoundList)
                 {
                     e.Display.DrawBrepShaded(bFace.DuplicateFace(false),mtl);
                 }
             }
 
-            if (coreObj.IsCmdKeyDown)
-            {
-                
-                if (coreObj.Cpt5 != null)
-                {
-                    this.AddConstructionPoints(coreObj.Cpt5);
-                    this.EnableCurveSnapArrow(true,false);
-                    e.Display.DrawPoints(coreObj.Cpt5, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.OrangeRed);
-                    
-                }
-                else
-                {
-                    Rhino.RhinoApp.WriteLine("5null");
-                }
-            }
-            else
-            {
-                this.EnableCurveSnapArrow(false,false);
-                //this.ClearConstructionPoints();
-            }
-
             if (coreObj.IsShiftKeyDown)
             {
-                coreObj.Cpt3Generator();
-                if (coreObj.Cpt3 != null)
+                coreObj.CptGenerator();
+                if (coreObj.CptList != null)
                 {
-                    this.AddConstructionPoints(coreObj.Cpt3);
-                }
-                else
-                {
-                    Rhino.RhinoApp.WriteLine("3null");
+                    this.AddConstructionPoints(coreObj.CptList);
+                    e.Display.DrawPoints(coreObj.CptList, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Red);
                 }
             }
             else
@@ -301,5 +391,10 @@ namespace MultiCut
                 return Rhino.Commands.Result.Nothing;
             }
         }
+    }
+
+    internal enum OctopusType
+    {
+        ISOU, ISOV, CPLX, CPLY, CPLZ, WPLX, WPLY, WPLZ
     }
 }
