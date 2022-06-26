@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Rhino;
 using Rhino.Geometry;
 
 
@@ -34,37 +35,88 @@ namespace MultiCut
             bEdgeList2Bpassed = brep2BPassed.Edges;
             return brep2BPassed != null & bEdgeList2Bpassed != null;
         }
-        public static bool PointOnCrvDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+
+        public static bool EdgeFinder(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        {
+            // Public Copy of the FarawayDetector() Method
+            return FarAwayDetector(crv, pt, doc);
+        }
+
+        private static bool FarAwayDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
         {
             crv.ClosestPoint(pt, out double t);
             Point3d ptProjected = crv.PointAt(t);
             return ptProjected.DistanceTo(pt) < doc.ModelAbsoluteTolerance;
         }
 
-        public static bool PointOverlapeDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc, out List<Point3d> ptList)
+        private static bool EdgeDupDetector(Curve crv, Brep brep)
         {
-            ptList = new List<Point3d>();
-            double disStart = pt.DistanceTo(crv.PointAtStart);
-            if (disStart > doc.ModelAbsoluteTolerance)
-            {
-                ptList.Add(crv.PointAtStart);
-            }
+            return brep.Edges.All(bEdge => !GeometryBase.GeometryEquals(crv, bEdge));
+        }
 
+        private static bool MidPtDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc, out List<Curve> crvSplitted)
+        {
+            crvSplitted = new List<Curve>();
+            double disStart = pt.DistanceTo(crv.PointAtStart);
             double disEnd = pt.DistanceTo(crv.PointAtEnd);
-            if (disEnd > doc.ModelAbsoluteTolerance)
+            if (disStart > doc.ModelAbsoluteTolerance & disEnd > doc.ModelAbsoluteTolerance)
             {
-                ptList.Add(crv.PointAtEnd);
+                crv.ClosestPoint(pt, out double t);
+                crvSplitted.AddRange(crv.Split(t));
+                return false;
             }
             return true;
         }
+        
+        private static bool FlipDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        {
+            double disStart = pt.DistanceTo(crv.PointAtStart);
+            if (disStart > doc.ModelAbsoluteTolerance)
+            {
+                crv.Reverse();
+                return false;
+            }
+            return true;
+        }
+
+        public static bool OctopusBundleCollector(Curve crv,
+            Point3d pt,
+            Brep brep,
+            Rhino.RhinoDoc doc,
+            out Dictionary<OctopusType, Curve> octopusRawDic,
+            OctopusType type)
+        {
+            octopusRawDic = new Dictionary<OctopusType, Curve>();
+            bool isPtOnCrv = FarAwayDetector(crv, pt, doc);
+            bool isCrvDuped = EdgeDupDetector(crv, brep);
+            if (isPtOnCrv & isCrvDuped)
+            {
+                bool isCrvNeedCut = MidPtDetector(crv, pt, doc, out List<Curve> crvSplittedList);
+                if (isCrvNeedCut)
+                {
+                    FlipDetector(crv, pt, doc);
+                    octopusRawDic.Add(type, crv);
+                }
+                else
+                {
+                    foreach (Curve crvSplitted in crvSplittedList)
+                    {
+                        FlipDetector(crv, pt, doc);
+                        octopusRawDic.Add(OctopusType._ISOU, crvSplitted);
+                    }
+                }
+            }
+            return true;
+        }
+        
     }
 
     internal class Core
-    {
+    { 
         #region FIELD
 
         private readonly Rhino.RhinoDoc currentDoc;
-        private readonly Brep brepSource;
+        private readonly Brep CurrentBrep;
         private readonly Rhino.Geometry.Collections.BrepEdgeList bEdgeList;
 
         #endregion
@@ -75,14 +127,10 @@ namespace MultiCut
         public Point3d CurrentPt { get; set; }
         private BrepEdge EdgeFound { get; set; }
         public List<BrepFace> FaceFoundList { get; set; }
-        public bool IsShiftKeyDown { get; set; }
+        public bool IsAssistKeyDown { get; set; }
         public Rhino.DocObjects.ConstructionPlane CutPlane { get; set; }
-        public List<Curve> IsocrvList { get; set; }
-        public List<Curve> CplcrvList { get; set; }
-        public List<Curve> OctopusArmList { get; set; }
-        public List<List<Point3d>> OctopusEndList { get; set; }
-        public List<string> OctopusNameList { get; set; }
-        public Point3d[] CptList { get; private set; }
+        public Point3d[] AssistPtList { get; private set; }
+        public Dictionary<OctopusType, Curve> OctopusDicRaw { get; set; }
 
         #endregion
 
@@ -90,7 +138,7 @@ namespace MultiCut
         public Core(Rhino.RhinoDoc doc)
         {
             this.currentDoc = doc;
-            Failsafe.IsBrepCollected = MethodBasic.ObjectCollecter("Select Brep to be Cut.", out this.brepSource, out this.bEdgeList);
+            Failsafe.IsBrepCollected = MethodBasic.ObjectCollecter("Select Brep to be Cut.", out this.CurrentBrep, out this.bEdgeList);
         }
         #endregion
 
@@ -99,7 +147,7 @@ namespace MultiCut
         {
             foreach (BrepEdge bEdge in bEdgeList)
             {
-                bool isPointOnEdge = MethodBasic.PointOnCrvDetector(bEdge, this.CurrentPt, this.currentDoc);
+                bool isPointOnEdge = MethodBasic.EdgeFinder(bEdge, this.CurrentPt, this.currentDoc);
                 bEdge.ClosestPoint(this.CurrentPt, out double t);
                 Point3d ptProjected = bEdge.PointAt(t);
                 // bEdgeTarget Finder //
@@ -121,49 +169,12 @@ namespace MultiCut
             int[] faceIndex = this.EdgeFound.AdjacentFaces();
             foreach (int index in faceIndex)
             {
-                this.FaceFoundList.Add(this.brepSource.Faces[index]);
+                this.FaceFoundList.Add(this.CurrentBrep.Faces[index]);
             }
 
             return this.FaceFoundList.Count != 0;
         }
-        private bool OctopusCollector(IEnumerable<Curve> intersectionCrvArray, ref int i, OctopusType[] plType)
-        {
-            foreach (Curve crv in intersectionCrvArray)
-            {
-                bool isPointOnCrv = MethodBasic.PointOnCrvDetector(crv, this.CurrentPt, this.currentDoc);
-                if (isPointOnCrv)
-                {
-                    MethodBasic.PointOverlapeDetector(crv, this.CurrentPt, this.currentDoc, out List<Point3d> ptList);
-                    foreach (Point3d pt2BAdd in ptList)
-                    {
-                        int j = 0;
-                        List<List<Point3d>> octopusEndListCopy = this.OctopusEndList.ToList();
-                        foreach (List<Point3d> endList in octopusEndListCopy)
-                        {
-                            foreach (Point3d ptInEnd in endList)
-                            {
-                                if (pt2BAdd.DistanceTo(ptInEnd) <= this.currentDoc.ModelAbsoluteTolerance)
-                                {
-                                    string newname = this.OctopusNameList[j];
-                                    newname = newname + ",";
-                                    newname = newname + plType[i];
-                                    this.OctopusNameList[j] = newname;
-                                }
-                                else
-                                {
-                                    this.OctopusArmList.Add(crv);
-                                    this.OctopusEndList.Add(ptList);
-                                    this.OctopusNameList.Add(plType[i].ToString());
-                                }
-                            }
-                            j++;
-                        }
-                    }
-                }
-            }
-            i++;
-            return true;
-        }
+        
         public bool CptGenerator()
         {
             if (this.EdgeFound == null)
@@ -171,7 +182,7 @@ namespace MultiCut
                 return false;
             }
             this.EdgeFound.DivideByCount(9, true, out Point3d[] cptTemp);
-            this.CptList = cptTemp;
+            this.AssistPtList = cptTemp;
             return true;
         }
         public bool PlaneGenerator()
@@ -190,7 +201,7 @@ namespace MultiCut
             
 
 
-            Rhino.Geometry.Intersect.Intersection.BrepPlane(this.brepSource,
+            Rhino.Geometry.Intersect.Intersection.BrepPlane(this.CurrentBrep,
                                                             this.PlaneCutter,
                                                             this.currentDoc.ModelAbsoluteTolerance,
                                                             out Curve[] intersecrtionCrvs,
@@ -229,55 +240,39 @@ namespace MultiCut
 
             return true;
         }
-        public bool IsocrvGenerator()
+        public bool ISOCrvGenerator()
         {
             this.FaceFinder();
             if (this.FaceFoundList == null)
             {
                 return false;
             }
-            this.IsocrvList = new List<Curve>();
             foreach (BrepFace bFace in this.FaceFoundList)
             {
                 bFace.ClosestPoint(this.CurrentPt, out double u, out double v);
                 Curve[] isou = bFace.TrimAwareIsoCurve(1, u);
                 Curve[] isov = bFace.TrimAwareIsoCurve(0, v);
-                this.IsocrvList.AddRange(isou);
-                this.IsocrvList.AddRange(isov);
                 foreach (Curve iso in isou)
                 {
-                    bool isPointOnIso = MethodBasic.PointOnCrvDetector(iso, this.CurrentPt, this.currentDoc);
-                    if (isPointOnIso)
-                    {
-                        this.OctopusArmList.Add(iso);
-                        this.OctopusNameList.Add(OctopusType._ISOU.ToString());
-                        MethodBasic.PointOverlapeDetector(iso,
-                                                          this.CurrentPt, 
-                                                          this.currentDoc, 
-                                                          out List < Point3d > ptList);
-                        this.OctopusEndList.Add(ptList);
-                    }
+                    MethodBasic.OctopusBundleCollector(iso, this.CurrentPt, this.CurrentBrep, this.currentDoc,
+                        out Dictionary<OctopusType, Curve> octopusRawDic, 
+                        OctopusType._ISOU);
+                    this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
+                        ToDictionary(k => k.Key, vl => vl.Value);
                 }
                 foreach (Curve iso in isov)
                 {
-                    bool isPointOnIso = MethodBasic.PointOnCrvDetector(iso, this.CurrentPt, this.currentDoc);
-                    if (isPointOnIso)
-                    {
-                        this.OctopusArmList.Add(iso);
-                        this.OctopusNameList.Add(OctopusType._ISOV.ToString());
-                        MethodBasic.PointOverlapeDetector(iso,
-                            this.CurrentPt, 
-                            this.currentDoc, 
-                            out List <Point3d> ptList);
-                        this.OctopusEndList.Add(ptList);
-                    }
+                    MethodBasic.OctopusBundleCollector(iso, this.CurrentPt, this.CurrentBrep, this.currentDoc,
+                        out Dictionary<OctopusType, Curve> octopusRawDic, 
+                        OctopusType._ISOV);
+                    this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
+                        ToDictionary(k => k.Key, vl => vl.Value);
                 }
             }
             return true;
         }
-        public bool CplcrvGenerator()
+        public bool CPLCrvGenerator()
         {
-            this.CplcrvList = new List<Curve>();
             Plane currentCpl =
                 this.currentDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
             if (currentCpl == Plane.Unset)
@@ -308,13 +303,21 @@ namespace MultiCut
                         out Point3d[] intersectionPts);
                     if (intersecrtionCrvs != null)
                     {
-                        this.OctopusCollector(intersecrtionCrvs, ref i, cplType);
+                        foreach (Curve crv in intersecrtionCrvs)
+                        {
+                            MethodBasic.OctopusBundleCollector(crv, this.CurrentPt, this.CurrentBrep, this.currentDoc,
+                                out Dictionary<OctopusType, Curve> octopusRawDic, 
+                                cplType[i]);
+                            this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
+                                ToDictionary(k => k.Key, vl => vl.Value);
+                        }
                     }
+                    i++;
                 }
             }
             return true;
         }
-        public bool WplcrvGenerator()
+        public bool WPLCrvGenerator()
         {
             Plane[] wplPlanes = new[]
             {
@@ -326,17 +329,25 @@ namespace MultiCut
             foreach (BrepFace bFace in this.FaceFoundList)
             {
                 int i = 0;
-                foreach (Plane cpl in wplPlanes)
+                foreach (Plane wpl in wplPlanes)
                 {
                     Rhino.Geometry.Intersect.Intersection.BrepPlane(bFace.DuplicateFace(false),
-                        cpl,
+                        wpl,
                         this.currentDoc.ModelAbsoluteTolerance,
                         out Curve[] intersecrtionCrvs,
                         out Point3d[] intersectionPts);
                     if (intersecrtionCrvs != null)
                     {
-                        this.OctopusCollector(intersecrtionCrvs, ref i, wplType);
+                        foreach (Curve crv in intersecrtionCrvs)
+                        {
+                            MethodBasic.OctopusBundleCollector(crv, this.CurrentPt, this.CurrentBrep, this.currentDoc,
+                                out Dictionary<OctopusType, Curve> octopusRawDic, 
+                                wplType[i]);
+                            this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
+                                ToDictionary(k => k.Key, vl => vl.Value);
+                        }
                     }
+                    i++;
                 }
             }
             return true;
@@ -360,16 +371,19 @@ namespace MultiCut
 
         protected override void OnMouseMove(Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
-            coreObj.OctopusArmList = new List<Curve>();
-            coreObj.OctopusEndList = new List<List<Point3d>>();
-            coreObj.OctopusNameList = new List<string>();
-            coreObj.IsShiftKeyDown = e.ShiftKeyDown;
+            coreObj.OctopusDicRaw = new Dictionary<OctopusType, Curve>();
+            coreObj.IsAssistKeyDown = e.ShiftKeyDown;
             coreObj.CurrentPt = e.Point;
             coreObj.PlaneGenerator();
             coreObj.CutPlaneGenerator();
-            coreObj.IsocrvGenerator();
-            coreObj.CplcrvGenerator();
-            coreObj.WplcrvGenerator();
+            coreObj.ISOCrvGenerator();
+            coreObj.CPLCrvGenerator();
+            coreObj.WPLCrvGenerator();
+            
+            foreach (OctopusType type in coreObj.OctopusDicRaw.Keys)
+            {
+                RhinoApp.WriteLine(type.ToString());
+            }
             
             base.OnMouseMove(e);
         }
@@ -384,36 +398,29 @@ namespace MultiCut
             {
                 e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
             }
-            
-            foreach (Curve crv in coreObj.OctopusArmList)
+
+            foreach (Curve crv in coreObj.OctopusDicRaw.Values)
             {
                 e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
             }
 
-            int i = 0;
-            foreach (List<Point3d> endList in coreObj.OctopusEndList)
+            foreach (KeyValuePair<OctopusType,Curve> element in coreObj.OctopusDicRaw)
             {
-                foreach (Point3d pt in endList)
-                {
-                    e.Display.DrawPoint(pt, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Blue);
-                    e.Display.Draw2dText(coreObj.OctopusNameList[i],System.Drawing.Color.Blue,pt,false,16);
-                }
-                i++;
+                e.Display.Draw2dText(element.Key.ToString(), System.Drawing.Color.Blue,element.Value.PointAtEnd, false, 14);
             }
-            
             foreach (BrepFace bFace in coreObj.FaceFoundList)
             {
                 e.Display.DrawBrepShaded(bFace.DuplicateFace(false),mtl);
             }
 
 
-            if (coreObj.IsShiftKeyDown)
+            if (coreObj.IsAssistKeyDown)
             {
                 coreObj.CptGenerator();
-                if (coreObj.CptList != null)
+                if (coreObj.AssistPtList != null)
                 {
-                    this.AddConstructionPoints(coreObj.CptList);
-                    e.Display.DrawPoints(coreObj.CptList, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Red);
+                    this.AddConstructionPoints(coreObj.AssistPtList);
+                    e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Red);
                 }
             }
             else

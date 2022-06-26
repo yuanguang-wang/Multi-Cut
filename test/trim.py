@@ -4,6 +4,9 @@ import System
 import rhinoscriptsyntax as rs
 
 def test_command():
+    list = ["_ISOV","_CPLZ","_WPLX"]
+    test = Rhino.UI.Dialogs.ShowMultiListBox("title","select the point", list)
+    print(test)
     crv = rs.coercecurve(rs.GetObject())
     mp = crv.PointAtLength(1400.0)
     gp = Rhino.Input.Custom.GetPoint()
