@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using Rhino;
 using Rhino.Geometry;
+using Rhino.Geometry.Collections;
 
 
 namespace MultiCut
@@ -40,6 +39,12 @@ namespace MultiCut
         {
             // Public Copy of the FarawayDetector() Method
             return FarAwayDetector(crv, pt, doc);
+        }
+
+        private static bool PolylineDetector(Curve crv)
+        {
+            Curve[] segArray = crv.DuplicateSegments();
+            return segArray.Length == 1;
         }
 
         private static bool FarAwayDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
@@ -83,26 +88,27 @@ namespace MultiCut
             Point3d pt,
             Brep brep,
             Rhino.RhinoDoc doc,
-            out Dictionary<OctopusType, Curve> octopusRawDic,
+            out Dictionary<Curve, OctopusType> octopusRawDic,
             OctopusType type)
         {
-            octopusRawDic = new Dictionary<OctopusType, Curve>();
+            octopusRawDic = new Dictionary<Curve, OctopusType>();
+            bool isCrvSingle = PolylineDetector(crv);
             bool isPtOnCrv = FarAwayDetector(crv, pt, doc);
             bool isCrvDuped = EdgeDupDetector(crv, brep);
-            if (isPtOnCrv & isCrvDuped)
+            if (isCrvSingle & isPtOnCrv & isCrvDuped)
             {
                 bool isCrvNeedCut = MidPtDetector(crv, pt, doc, out List<Curve> crvSplittedList);
                 if (isCrvNeedCut)
                 {
                     FlipDetector(crv, pt, doc);
-                    octopusRawDic.Add(type, crv);
+                    octopusRawDic.Add(crv, type);
                 }
                 else
                 {
                     foreach (Curve crvSplitted in crvSplittedList)
                     {
                         FlipDetector(crv, pt, doc);
-                        octopusRawDic.Add(OctopusType._ISOU, crvSplitted);
+                        octopusRawDic.Add(crvSplitted, type);
                     }
                 }
             }
@@ -125,12 +131,13 @@ namespace MultiCut
         public Curve[] CutterCrvs { get; private set; }
         private Plane PlaneCutter { get; set; }
         public Point3d CurrentPt { get; set; }
-        private BrepEdge EdgeFound { get; set; }
+        private List<BrepEdge> EdgeFoundList { get; set; }
         public List<BrepFace> FaceFoundList { get; set; }
         public bool IsAssistKeyDown { get; set; }
         public Rhino.DocObjects.ConstructionPlane CutPlane { get; set; }
         public Point3d[] AssistPtList { get; private set; }
-        public Dictionary<OctopusType, Curve> OctopusDicRaw { get; set; }
+        public Dictionary<Curve, OctopusType> OctopusRaw { get; set; }
+        public Dictionary<Curve, string> OctopusCascaded { get; set; }
 
         #endregion
 
@@ -145,6 +152,7 @@ namespace MultiCut
         #region MTHD
         private bool EdgeFinder()
         {
+            this.EdgeFoundList = new List<BrepEdge>();
             foreach (BrepEdge bEdge in bEdgeList)
             {
                 bool isPointOnEdge = MethodBasic.EdgeFinder(bEdge, this.CurrentPt, this.currentDoc);
@@ -153,21 +161,32 @@ namespace MultiCut
                 // bEdgeTarget Finder //
                 if (isPointOnEdge) 
                 {
-                    this.EdgeFound = bEdge;
-                    break;
+                    this.EdgeFoundList.Add(bEdge);
+                    
                 }
             }
             return true;
         }
         private bool FaceFinder()
         {
-            if (this.EdgeFound == null)
+            if (this.EdgeFoundList == null)
             {
                 return false;
             }
             this.FaceFoundList = new List<BrepFace>();
-            int[] faceIndex = this.EdgeFound.AdjacentFaces();
-            foreach (int index in faceIndex)
+            List<int> faceIndexList = new List<int>();
+            foreach (BrepEdge bEdge in this.EdgeFoundList)
+            {
+                int[] faceIndexArray = bEdge.AdjacentFaces();
+                foreach (int faceindex in faceIndexArray)
+                {
+                    if (!faceIndexList.Contains(faceindex))
+                    {
+                        faceIndexList.Add(faceindex);
+                    }
+                }
+            }
+            foreach (int index in faceIndexList)
             {
                 this.FaceFoundList.Add(this.CurrentBrep.Faces[index]);
             }
@@ -175,30 +194,38 @@ namespace MultiCut
             return this.FaceFoundList.Count != 0;
         }
         
-        public bool CptGenerator()
+        public bool AssistPtGenerator()
         {
-            if (this.EdgeFound == null)
+            if (this.EdgeFoundList.Count != 1)
             {
                 return false;
             }
-            this.EdgeFound.DivideByCount(9, true, out Point3d[] cptTemp);
+            this.EdgeFoundList[0].DivideByCount(9, true, out Point3d[] cptTemp);
             this.AssistPtList = cptTemp;
             return true;
         }
-        public bool PlaneGenerator()
+
+        private bool ProphetGenerator()
         {
             this.EdgeFinder();
-            if (EdgeFound != null)
+            if (this.EdgeFoundList.Count != 1)
             {
-                EdgeFound.ClosestPoint(CurrentPt, out double p);
-                Vector3d axis = EdgeFound.TangentAt(p);
-                PlaneCutter = new Plane(CurrentPt, axis);
+                return false;
             }
-            else
+
+            BrepVertexList bVtxList = this.CurrentBrep.Vertices;
+            foreach (BrepVertex bVtx in bVtxList)
             {
-                // Placeholder //
+                if (this.CurrentPt.DistanceTo(bVtx.Location) < this.currentDoc.ModelAbsoluteTolerance)
+                {
+                    return false;
+                }
             }
             
+            EdgeFoundList[0].ClosestPoint(CurrentPt, out double p);
+            Vector3d axis = EdgeFoundList[0].TangentAt(p);
+            PlaneCutter = new Plane(CurrentPt, axis);
+
 
 
             Rhino.Geometry.Intersect.Intersection.BrepPlane(this.CurrentBrep,
@@ -209,7 +236,8 @@ namespace MultiCut
             CutterCrvs = intersecrtionCrvs;
             return true;
         }
-        public bool CutPlaneGenerator()
+
+        private bool CutPlaneGenerator()
         {
             if (this.PlaneCutter == null | this.CutterCrvs == null)
             {
@@ -240,7 +268,8 @@ namespace MultiCut
 
             return true;
         }
-        public bool ISOCrvGenerator()
+
+        private bool ISOCrvGenerator()
         {
             this.FaceFinder();
             if (this.FaceFoundList == null)
@@ -255,23 +284,28 @@ namespace MultiCut
                 foreach (Curve iso in isou)
                 {
                     MethodBasic.OctopusBundleCollector(iso, this.CurrentPt, this.CurrentBrep, this.currentDoc,
-                        out Dictionary<OctopusType, Curve> octopusRawDic, 
-                        OctopusType._ISOU);
-                    this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
-                        ToDictionary(k => k.Key, vl => vl.Value);
+                                                       out Dictionary<Curve, OctopusType> octopusRawDic, 
+                                                       OctopusType._ISOU);
+                    foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
+                    {
+                        this.OctopusRaw.Add(element.Key, element.Value);
+                    }
                 }
                 foreach (Curve iso in isov)
                 {
                     MethodBasic.OctopusBundleCollector(iso, this.CurrentPt, this.CurrentBrep, this.currentDoc,
-                        out Dictionary<OctopusType, Curve> octopusRawDic, 
-                        OctopusType._ISOV);
-                    this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
-                        ToDictionary(k => k.Key, vl => vl.Value);
+                                                       out Dictionary<Curve, OctopusType> octopusRawDic, 
+                                                       OctopusType._ISOV);
+                    foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
+                    {
+                        this.OctopusRaw.Add(element.Key, element.Value);
+                    }
                 }
             }
             return true;
         }
-        public bool CPLCrvGenerator()
+
+        private bool CPLCrvGenerator()
         {
             Plane currentCpl =
                 this.currentDoc.Views.ActiveView.ActiveViewport.ConstructionPlane();
@@ -279,7 +313,10 @@ namespace MultiCut
             {
                 return false;
             }
+            
             Vector3d[] cplAxis = new[] { currentCpl.XAxis, currentCpl.YAxis, currentCpl.ZAxis };
+            OctopusType[] cplType = new[] { OctopusType._CPLX, OctopusType._CPLY, OctopusType._CPLZ };
+            
             if (this.FaceFoundList == null || this.CurrentPt == null)
             {
                 return false;
@@ -290,26 +327,27 @@ namespace MultiCut
                 new Plane(this.CurrentPt, cplAxis[1]),
                 new Plane(this.CurrentPt, cplAxis[2])
             };
-            OctopusType[] cplType = new[] { OctopusType._CPLX, OctopusType._CPLY, OctopusType._CPLZ };
             foreach (BrepFace bFace in this.FaceFoundList)
             {
                 int i = 0;
                 foreach (Plane cpl in cplPlanes)
                 {
                     Rhino.Geometry.Intersect.Intersection.BrepPlane(bFace.DuplicateFace(false),
-                        cpl,
-                        this.currentDoc.ModelAbsoluteTolerance,
-                        out Curve[] intersecrtionCrvs,
-                        out Point3d[] intersectionPts);
+                                                                    cpl,
+                                                                    this.currentDoc.ModelAbsoluteTolerance,
+                                                                    out Curve[] intersecrtionCrvs,
+                                                                    out Point3d[] intersectionPts);
                     if (intersecrtionCrvs != null)
                     {
                         foreach (Curve crv in intersecrtionCrvs)
                         {
                             MethodBasic.OctopusBundleCollector(crv, this.CurrentPt, this.CurrentBrep, this.currentDoc,
-                                out Dictionary<OctopusType, Curve> octopusRawDic, 
-                                cplType[i]);
-                            this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
-                                ToDictionary(k => k.Key, vl => vl.Value);
+                                                               out Dictionary<Curve, OctopusType> octopusRawDic, 
+                                                               cplType[i]);
+                            foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
+                            {
+                                this.OctopusRaw.Add(element.Key, element.Value);
+                            }
                         }
                     }
                     i++;
@@ -317,13 +355,14 @@ namespace MultiCut
             }
             return true;
         }
-        public bool WPLCrvGenerator()
+
+        private bool WPLCrvGenerator()
         {
             Plane[] wplPlanes = new[]
             {
-                Plane.WorldXY, //z
-                Plane.WorldYZ, //x
-                Plane.WorldZX  //y
+                new Plane(this.CurrentPt, Vector3d.ZAxis), //z
+                new Plane(this.CurrentPt, Vector3d.XAxis), //x
+                new Plane(this.CurrentPt, Vector3d.YAxis)  //y
             };
             OctopusType[] wplType = new[] { OctopusType._WPLZ, OctopusType._WPLX, OctopusType._WPLY };
             foreach (BrepFace bFace in this.FaceFoundList)
@@ -332,19 +371,22 @@ namespace MultiCut
                 foreach (Plane wpl in wplPlanes)
                 {
                     Rhino.Geometry.Intersect.Intersection.BrepPlane(bFace.DuplicateFace(false),
-                        wpl,
-                        this.currentDoc.ModelAbsoluteTolerance,
-                        out Curve[] intersecrtionCrvs,
-                        out Point3d[] intersectionPts);
+                                                                    wpl,
+                                                                    this.currentDoc.ModelAbsoluteTolerance,
+                                                                    out Curve[] intersecrtionCrvs,
+                                                                    out Point3d[] intersectionPts);
                     if (intersecrtionCrvs != null)
                     {
                         foreach (Curve crv in intersecrtionCrvs)
                         {
+
                             MethodBasic.OctopusBundleCollector(crv, this.CurrentPt, this.CurrentBrep, this.currentDoc,
-                                out Dictionary<OctopusType, Curve> octopusRawDic, 
-                                wplType[i]);
-                            this.OctopusDicRaw = this.OctopusDicRaw.Concat(octopusRawDic).
-                                ToDictionary(k => k.Key, vl => vl.Value);
+                                                               out Dictionary<Curve, OctopusType> octopusRawDic, 
+                                                               wplType[i]);
+                            foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
+                            {
+                                this.OctopusRaw.Add(element.Key, element.Value);
+                            }
                         }
                     }
                     i++;
@@ -352,7 +394,47 @@ namespace MultiCut
             }
             return true;
         }
-        
+
+        private bool OctopusCascader()
+        {
+            this.OctopusCascaded = new Dictionary<Curve, string>();
+            //this.OctopusDicCascaded.Add(this.OctopusDicRaw.Keys.First(), this.OctopusDicRaw.Values.First().ToString());
+            List<Curve> octopusCrvList = this.OctopusRaw.Keys.ToList();
+            List<OctopusType> octopusTypeList = this.OctopusRaw.Values.ToList();
+            for (int i = 1; i < this.OctopusRaw.Count; i++)
+            {
+                foreach (KeyValuePair<Curve, OctopusType> element in this.OctopusRaw)
+                {
+                    bool isCrvIdentical = GeometryBase.GeometryEquals(element.Key, octopusCrvList[i]);
+                    if (isCrvIdentical)
+                    {
+                        bool isTypeIdentical = octopusTypeList[i] == element.Value;
+                        string typeOriginal = octopusTypeList[i].ToString();
+                        if (!isTypeIdentical)
+                        {
+                            string typeCombined = typeOriginal + element.Value.ToString();
+                        }
+                    }
+                    else
+                    {
+                        
+                    }
+                }
+
+            }
+            return true;
+        }
+
+        public bool OnMouseMoveBundle()
+        {
+            this.ProphetGenerator();
+            this.CutPlaneGenerator();
+            this.ISOCrvGenerator();
+            this.CPLCrvGenerator();
+            this.WPLCrvGenerator();
+            //this.OctopusCascader()
+            return true;
+        }
 
 
         #endregion
@@ -371,19 +453,10 @@ namespace MultiCut
 
         protected override void OnMouseMove(Rhino.Input.Custom.GetPointMouseEventArgs e)
         {
-            coreObj.OctopusDicRaw = new Dictionary<OctopusType, Curve>();
-            coreObj.IsAssistKeyDown = e.ShiftKeyDown;
+            coreObj.OctopusRaw = new Dictionary<Curve, OctopusType>();
+            coreObj.IsAssistKeyDown = e.ShiftKeyDown & e.ControlKeyDown;
             coreObj.CurrentPt = e.Point;
-            coreObj.PlaneGenerator();
-            coreObj.CutPlaneGenerator();
-            coreObj.ISOCrvGenerator();
-            coreObj.CPLCrvGenerator();
-            coreObj.WPLCrvGenerator();
-            
-            foreach (OctopusType type in coreObj.OctopusDicRaw.Keys)
-            {
-                RhinoApp.WriteLine(type.ToString());
-            }
+            coreObj.OnMouseMoveBundle();
             
             base.OnMouseMove(e);
         }
@@ -399,14 +472,14 @@ namespace MultiCut
                 e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
             }
 
-            foreach (Curve crv in coreObj.OctopusDicRaw.Values)
+            foreach (Curve crv in coreObj.OctopusRaw.Keys)
             {
                 e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
             }
 
-            foreach (KeyValuePair<OctopusType,Curve> element in coreObj.OctopusDicRaw)
+            foreach (KeyValuePair<Curve, OctopusType> element in coreObj.OctopusRaw)
             {
-                e.Display.Draw2dText(element.Key.ToString(), System.Drawing.Color.Blue,element.Value.PointAtEnd, false, 14);
+                e.Display.Draw2dText(element.Value.ToString(), System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
             }
             foreach (BrepFace bFace in coreObj.FaceFoundList)
             {
@@ -416,7 +489,7 @@ namespace MultiCut
 
             if (coreObj.IsAssistKeyDown)
             {
-                coreObj.CptGenerator();
+                coreObj.AssistPtGenerator();
                 if (coreObj.AssistPtList != null)
                 {
                     this.AddConstructionPoints(coreObj.AssistPtList);
@@ -427,6 +500,7 @@ namespace MultiCut
             {
                 this.ClearConstructionPoints();
             }
+
             
             base.OnDynamicDraw(e);
         }
