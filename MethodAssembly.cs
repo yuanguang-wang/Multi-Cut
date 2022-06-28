@@ -398,29 +398,54 @@ namespace MultiCut
         private bool OctopusCascader()
         {
             this.OctopusCascaded = new Dictionary<Curve, string>();
-            //this.OctopusDicCascaded.Add(this.OctopusDicRaw.Keys.First(), this.OctopusDicRaw.Values.First().ToString());
+            
             List<Curve> octopusCrvList = this.OctopusRaw.Keys.ToList();
             List<OctopusType> octopusTypeList = this.OctopusRaw.Values.ToList();
-            for (int i = 1; i < this.OctopusRaw.Count; i++)
+            List<string> octopusTypeStrList = new List<string>();
+            
+            List<int> criminalIndex = new List<int>();
+            List<int> allIndex = new List<int>();
+
+            for (int i = 0; i < octopusCrvList.Count; i++)
             {
-                foreach (KeyValuePair<Curve, OctopusType> element in this.OctopusRaw)
+                allIndex.Add(i);
+            }
+            
+            for (int i = 0; i < this.OctopusRaw.Count - 1; i++)
+            {
+                for (int j = i + 1; j < this.OctopusRaw.Count; j++)
                 {
-                    bool isCrvIdentical = GeometryBase.GeometryEquals(element.Key, octopusCrvList[i]);
+                    List<Curve> keyList = this.OctopusRaw.Keys.ToList();
+                    List<OctopusType> valueList = this.OctopusRaw.Values.ToList();
+                    bool isCrvIdentical = GeometryBase.GeometryEquals(keyList[j], octopusCrvList[i]);
+                    string typeOriginal = octopusTypeList[i].ToString();
+                    string typeModifeid = "";
                     if (isCrvIdentical)
                     {
-                        bool isTypeIdentical = octopusTypeList[i] == element.Value;
-                        string typeOriginal = octopusTypeList[i].ToString();
+                        bool isTypeIdentical = octopusTypeList[i] == valueList[j];
                         if (!isTypeIdentical)
                         {
-                            string typeCombined = typeOriginal + element.Value.ToString();
+                            typeModifeid += typeOriginal;
+                            typeModifeid += valueList[j].ToString();
+                            if (!criminalIndex.Contains(j))
+                            {
+                                criminalIndex.Add(j);
+                            }
                         }
                     }
                     else
                     {
-                        
+                        typeModifeid += typeOriginal;
                     }
+                    octopusTypeStrList.Add(typeModifeid);
                 }
+            }
 
+            IEnumerable<int> clearIndex = allIndex.Except(criminalIndex);
+            List<int> clearIndexList = clearIndex.ToList();
+            for (int i = 0; i < clearIndexList.Count(); i++)
+            {
+                this.OctopusCascaded.Add(octopusCrvList[clearIndexList[i]], octopusTypeStrList[clearIndexList[i]]);
             }
             return true;
         }
@@ -432,7 +457,7 @@ namespace MultiCut
             this.ISOCrvGenerator();
             this.CPLCrvGenerator();
             this.WPLCrvGenerator();
-            //this.OctopusCascader()
+            this.OctopusCascader();
             return true;
         }
 
@@ -472,14 +497,14 @@ namespace MultiCut
                 e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
             }
 
-            foreach (Curve crv in coreObj.OctopusRaw.Keys)
+            foreach (Curve crv in coreObj.OctopusCascaded.Keys)
             {
                 e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
             }
 
-            foreach (KeyValuePair<Curve, OctopusType> element in coreObj.OctopusRaw)
+            foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascaded)
             {
-                e.Display.Draw2dText(element.Value.ToString(), System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
+                e.Display.Draw2dText(element.Value, System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
             }
             foreach (BrepFace bFace in coreObj.FaceFoundList)
             {
@@ -500,6 +525,9 @@ namespace MultiCut
             {
                 this.ClearConstructionPoints();
             }
+            
+            Rhino.RhinoApp.WriteLine(coreObj.OctopusRaw.Count.ToString());
+            Rhino.RhinoApp.WriteLine(coreObj.OctopusCascaded.Count.ToString());
 
             
             base.OnDynamicDraw(e);
