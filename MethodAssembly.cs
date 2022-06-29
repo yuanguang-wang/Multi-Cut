@@ -13,17 +13,14 @@ namespace MultiCut
 
     internal static class MethodBasic
     {
-        public static bool ObjectCollecter(string commandPrompt, 
-                                           out Brep brep2BPassed, 
-                                           out Rhino.Geometry.Collections.BrepEdgeList bEdgeList2Bpassed)
+        public static bool ObjectCollecter(out Brep brep2BPassed)
         {
             brep2BPassed = null;
-            bEdgeList2Bpassed = null;
             Rhino.Input.Custom.GetObject getObject = new Rhino.Input.Custom.GetObject
             {
                 GeometryFilter = Rhino.DocObjects.ObjectType.Brep 
             };
-            getObject.SetCommandPrompt(commandPrompt);
+            getObject.SetCommandPrompt("Select Brep to be Cut.");
             getObject.Get();
             if (getObject.CommandResult() != Rhino.Commands.Result.Success)
             {
@@ -31,35 +28,34 @@ namespace MultiCut
             }
             Rhino.DocObjects.ObjRef objRef = getObject.Object(0);
             brep2BPassed = objRef.Brep();
-            bEdgeList2Bpassed = brep2BPassed.Edges;
-            return brep2BPassed != null & bEdgeList2Bpassed != null;
+            return brep2BPassed != null;
         }
 
         public static bool EdgeFinder(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
         {
             // Public Copy of the FarawayDetector() Method
-            return FarAwayDetector(crv, pt, doc);
+            return FarAwayFilter(crv, pt, doc);
         }
 
-        private static bool PolylineDetector(Curve crv)
+        private static bool PolylineFilter(Curve crv)
         {
             Curve[] segArray = crv.DuplicateSegments();
             return segArray.Length == 1;
         }
 
-        private static bool FarAwayDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        private static bool FarAwayFilter(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
         {
             crv.ClosestPoint(pt, out double t);
             Point3d ptProjected = crv.PointAt(t);
             return ptProjected.DistanceTo(pt) < doc.ModelAbsoluteTolerance;
         }
 
-        private static bool EdgeDupDetector(Curve crv, Brep brep)
+        private static bool EdgeDupFilter(Curve crv, Brep brep)
         {
             return brep.Edges.All(bEdge => !GeometryBase.GeometryEquals(crv, bEdge));
         }
 
-        private static bool MidPtDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc, out List<Curve> crvSplitted)
+        private static bool MidPtFilter(Curve crv, Point3d pt, Rhino.RhinoDoc doc, out List<Curve> crvSplitted)
         {
             crvSplitted = new List<Curve>();
             double disStart = pt.DistanceTo(crv.PointAtStart);
@@ -73,7 +69,7 @@ namespace MultiCut
             return true;
         }
         
-        private static bool FlipDetector(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        private static bool FlipFilter(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
         {
             double disStart = pt.DistanceTo(crv.PointAtStart);
             if (disStart > doc.ModelAbsoluteTolerance)
@@ -92,22 +88,22 @@ namespace MultiCut
             OctopusType type)
         {
             octopusRawDic = new Dictionary<Curve, OctopusType>();
-            bool isCrvSingle = PolylineDetector(crv);
-            bool isPtOnCrv = FarAwayDetector(crv, pt, doc);
-            bool isCrvDuped = EdgeDupDetector(crv, brep);
+            bool isCrvSingle = PolylineFilter(crv);
+            bool isPtOnCrv = FarAwayFilter(crv, pt, doc);
+            bool isCrvDuped = EdgeDupFilter(crv, brep);
             if (isCrvSingle & isPtOnCrv & isCrvDuped)
             {
-                bool isCrvNeedCut = MidPtDetector(crv, pt, doc, out List<Curve> crvSplittedList);
+                bool isCrvNeedCut = MidPtFilter(crv, pt, doc, out List<Curve> crvSplittedList);
                 if (isCrvNeedCut)
                 {
-                    FlipDetector(crv, pt, doc);
+                    FlipFilter(crv, pt, doc);
                     octopusRawDic.Add(crv, type);
                 }
                 else
                 {
                     foreach (Curve crvSplitted in crvSplittedList)
                     {
-                        FlipDetector(crv, pt, doc);
+                        FlipFilter(crv, pt, doc);
                         octopusRawDic.Add(crvSplitted, type);
                     }
                 }
@@ -123,7 +119,6 @@ namespace MultiCut
 
         private readonly Rhino.RhinoDoc currentDoc;
         private readonly Brep CurrentBrep;
-        private readonly Rhino.Geometry.Collections.BrepEdgeList bEdgeList;
 
         #endregion
         
@@ -137,7 +132,7 @@ namespace MultiCut
         public Rhino.DocObjects.ConstructionPlane CutPlane { get; set; }
         public Point3d[] AssistPtList { get; private set; }
         public Dictionary<Curve, OctopusType> OctopusRaw { get; set; }
-        public Dictionary<Curve, string> OctopusCascaded { get; set; }
+        public Dictionary<Curve, string> OctopusCascade { get; set; }
 
         #endregion
 
@@ -145,7 +140,7 @@ namespace MultiCut
         public Core(Rhino.RhinoDoc doc)
         {
             this.currentDoc = doc;
-            Failsafe.IsBrepCollected = MethodBasic.ObjectCollecter("Select Brep to be Cut.", out this.CurrentBrep, out this.bEdgeList);
+            Watchdog.IsBrepCollected = MethodBasic.ObjectCollecter(out this.CurrentBrep);
         }
         #endregion
 
@@ -153,7 +148,7 @@ namespace MultiCut
         private bool EdgeFinder()
         {
             this.EdgeFoundList = new List<BrepEdge>();
-            foreach (BrepEdge bEdge in bEdgeList)
+            foreach (BrepEdge bEdge in CurrentBrep.Edges)
             {
                 bool isPointOnEdge = MethodBasic.EdgeFinder(bEdge, this.CurrentPt, this.currentDoc);
                 bEdge.ClosestPoint(this.CurrentPt, out double t);
@@ -397,7 +392,7 @@ namespace MultiCut
 
         private bool OctopusCascader()
         {
-            this.OctopusCascaded = new Dictionary<Curve, string>();
+            this.OctopusCascade = new Dictionary<Curve, string>();
             
             List<Curve> octopusCrvList = this.OctopusRaw.Keys.ToList();
             List<OctopusType> octopusTypeList = this.OctopusRaw.Values.ToList();
@@ -406,51 +401,49 @@ namespace MultiCut
             List<int> criminalIndex = new List<int>();
             List<int> allIndex = new List<int>();
 
+            List<Curve> keyList = this.OctopusRaw.Keys.ToList();
+            List<OctopusType> valueList = this.OctopusRaw.Values.ToList();
+            
             for (int i = 0; i < octopusCrvList.Count; i++)
             {
                 allIndex.Add(i);
             }
-            
             for (int i = 0; i < this.OctopusRaw.Count - 1; i++)
             {
+                string typeOriginal = octopusTypeList[i].ToString();
+                string typeModifeid = "";
+                typeModifeid += typeOriginal;
                 for (int j = i + 1; j < this.OctopusRaw.Count; j++)
                 {
-                    List<Curve> keyList = this.OctopusRaw.Keys.ToList();
-                    List<OctopusType> valueList = this.OctopusRaw.Values.ToList();
                     bool isCrvIdentical = GeometryBase.GeometryEquals(keyList[j], octopusCrvList[i]);
-                    string typeOriginal = octopusTypeList[i].ToString();
-                    string typeModifeid = "";
                     if (isCrvIdentical)
                     {
-                        bool isTypeIdentical = octopusTypeList[i] == valueList[j];
-                        if (!isTypeIdentical)
+                        if (octopusTypeList[i] != valueList[j])
                         {
-                            typeModifeid += typeOriginal;
-                            typeModifeid += valueList[j].ToString();
+                            if (!typeModifeid.Contains(valueList[j].ToString()))
+                            {
+                                typeModifeid += valueList[j].ToString();
+                            }
                             if (!criminalIndex.Contains(j))
                             {
                                 criminalIndex.Add(j);
                             }
                         }
                     }
-                    else
-                    {
-                        typeModifeid += typeOriginal;
-                    }
-                    octopusTypeStrList.Add(typeModifeid);
                 }
+                octopusTypeStrList.Add(typeModifeid);
             }
 
             IEnumerable<int> clearIndex = allIndex.Except(criminalIndex);
             List<int> clearIndexList = clearIndex.ToList();
             for (int i = 0; i < clearIndexList.Count(); i++)
             {
-                this.OctopusCascaded.Add(octopusCrvList[clearIndexList[i]], octopusTypeStrList[clearIndexList[i]]);
+                this.OctopusCascade.Add(octopusCrvList[clearIndexList[i]], octopusTypeStrList[clearIndexList[i]]);
             }
             return true;
         }
 
-        public bool OnMouseMoveBundle()
+        public void OnMouseMoveBundle()
         {
             this.ProphetGenerator();
             this.CutPlaneGenerator();
@@ -458,7 +451,6 @@ namespace MultiCut
             this.CPLCrvGenerator();
             this.WPLCrvGenerator();
             this.OctopusCascader();
-            return true;
         }
 
 
@@ -497,12 +489,12 @@ namespace MultiCut
                 e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
             }
 
-            foreach (Curve crv in coreObj.OctopusCascaded.Keys)
+            foreach (Curve crv in coreObj.OctopusCascade.Keys)
             {
                 e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
             }
 
-            foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascaded)
+            foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascade)
             {
                 e.Display.Draw2dText(element.Value, System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
             }
@@ -526,15 +518,11 @@ namespace MultiCut
                 this.ClearConstructionPoints();
             }
             
-            Rhino.RhinoApp.WriteLine(coreObj.OctopusRaw.Count.ToString());
-            Rhino.RhinoApp.WriteLine(coreObj.OctopusCascaded.Count.ToString());
-
-            
             base.OnDynamicDraw(e);
         }
     }
 
-    internal static class Failsafe
+    internal static class Watchdog
     {
         public static bool IsBrepCollected { get; set; }
         public static Rhino.Commands.Result Interruption(bool result)
