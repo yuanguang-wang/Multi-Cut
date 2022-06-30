@@ -31,10 +31,9 @@ namespace MultiCut
             return brep2BPassed != null;
         }
 
-        public static bool EdgeFinder(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        public static bool EdgeFinder(Brep brep, Point3d pt, Rhino.RhinoDoc doc)
         {
-            // Public Copy of the FarawayDetector() Method
-            return FarAwayFilter(crv, pt, doc);
+            return brep.Edges.Select(bEdge => FarAwayFilter(bEdge, pt, doc)).FirstOrDefault();
         }
 
         private static bool PolylineFilter(Curve crv)
@@ -117,8 +116,8 @@ namespace MultiCut
     { 
         #region FIELD
 
-        private readonly Rhino.RhinoDoc currentDoc;
-        private readonly Brep CurrentBrep;
+        public readonly Rhino.RhinoDoc currentDoc;
+        public readonly Brep CurrentBrep;
 
         #endregion
         
@@ -145,29 +144,22 @@ namespace MultiCut
         #endregion
 
         #region MTHD
-        private bool EdgeFinder()
+        private void EdgeFinder()
         {
             this.EdgeFoundList = new List<BrepEdge>();
             foreach (BrepEdge bEdge in CurrentBrep.Edges)
             {
-                bool isPointOnEdge = MethodBasic.EdgeFinder(bEdge, this.CurrentPt, this.currentDoc);
                 bEdge.ClosestPoint(this.CurrentPt, out double t);
                 Point3d ptProjected = bEdge.PointAt(t);
-                // bEdgeTarget Finder //
-                if (isPointOnEdge) 
+                double distance = ptProjected.DistanceTo(this.CurrentPt);
+                if (distance < this.currentDoc.ModelAbsoluteTolerance) 
                 {
                     this.EdgeFoundList.Add(bEdge);
-                    
                 }
             }
-            return true;
         }
-        private bool FaceFinder()
+        private void FaceFinder()
         {
-            if (this.EdgeFoundList == null)
-            {
-                return false;
-            }
             this.FaceFoundList = new List<BrepFace>();
             List<int> faceIndexList = new List<int>();
             foreach (BrepEdge bEdge in this.EdgeFoundList)
@@ -185,24 +177,19 @@ namespace MultiCut
             {
                 this.FaceFoundList.Add(this.CurrentBrep.Faces[index]);
             }
-
-            return this.FaceFoundList.Count != 0;
         }
         
-        public bool AssistPtGenerator()
+        public void AssistPtGenerator()
         {
-            if (this.EdgeFoundList.Count != 1)
+            if (this.EdgeFoundList.Count == 1)
             {
-                return false;
+                this.EdgeFoundList[0].DivideByCount(9, true, out Point3d[] cptTemp);
+                this.AssistPtList = cptTemp;
             }
-            this.EdgeFoundList[0].DivideByCount(9, true, out Point3d[] cptTemp);
-            this.AssistPtList = cptTemp;
-            return true;
         }
 
         private bool ProphetGenerator()
         {
-            this.EdgeFinder();
             if (this.EdgeFoundList.Count != 1)
             {
                 return false;
@@ -266,7 +253,6 @@ namespace MultiCut
 
         private bool ISOCrvGenerator()
         {
-            this.FaceFinder();
             if (this.FaceFoundList == null)
             {
                 return false;
@@ -445,6 +431,8 @@ namespace MultiCut
 
         public void OnMouseMoveBundle()
         {
+            this.EdgeFinder();
+            this.FaceFinder();
             this.ProphetGenerator();
             this.CutPlaneGenerator();
             this.ISOCrvGenerator();
@@ -473,7 +461,11 @@ namespace MultiCut
             coreObj.OctopusRaw = new Dictionary<Curve, OctopusType>();
             coreObj.IsAssistKeyDown = e.ShiftKeyDown & e.ControlKeyDown;
             coreObj.CurrentPt = e.Point;
-            coreObj.OnMouseMoveBundle();
+            bool isPtOnEdge = MethodBasic.EdgeFinder(coreObj.CurrentBrep, coreObj.CurrentPt, coreObj.currentDoc);
+            if (isPtOnEdge)
+            {
+                coreObj.OnMouseMoveBundle();
+            }
             
             base.OnMouseMove(e);
         }
