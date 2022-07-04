@@ -29,7 +29,7 @@ namespace MultiCut
             }
             core.OctopusPtStocker.Add(getFirstPoint.Point());
             
-            GetNextPoint getNextPoint = new GetNextPoint(core);
+            GetNextPoint getNextPoint = new GetNextPoint(core, 0);
             getNextPoint.SetCommandPrompt("Pick next point");
             getNextPoint.Get();
             if (getNextPoint.CommandResult() != Rhino.Commands.Result.Success)
