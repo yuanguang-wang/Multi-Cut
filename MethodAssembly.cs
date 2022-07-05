@@ -208,7 +208,15 @@ namespace MultiCut
         private void DrawFaceGenerator()
         {
             this.DrawFaceFoundList = new List<BrepFace>();
-            List<int> drawFaceFoundIndexList = this.CurrentFaceFoundIndexList.Union(this.LastFaceFoundIndexList).ToList();
+            List<int> drawFaceFoundIndexList;
+            if (this.LastFaceFoundIndexList == null)
+            {
+                drawFaceFoundIndexList = this.CurrentFaceFoundIndexList;
+            }
+            else
+            {
+                drawFaceFoundIndexList = this.CurrentFaceFoundIndexList.Union(this.LastFaceFoundIndexList).ToList();
+            }
             foreach (int index in drawFaceFoundIndexList)
             {
                 this.DrawFaceFoundList.Add(this.currentBrep.Faces[index]);
@@ -238,11 +246,9 @@ namespace MultiCut
                     return;
                 }
             }
-            this.CurrentEdgeFoundList[0].ClosestPoint(CurrentPt, out double p);
+            this.CurrentEdgeFoundList[0].ClosestPoint(this.CurrentPt, out double p);
             Vector3d axis = CurrentEdgeFoundList[0].TangentAt(p);
-            ProphetPlane = new Plane(CurrentPt, axis);
-
-
+            ProphetPlane = new Plane(this.CurrentPt, axis);
 
             Rhino.Geometry.Intersect.Intersection.BrepPlane(this.currentBrep,
                                                             this.ProphetPlane,
@@ -425,10 +431,7 @@ namespace MultiCut
             this.CurrentFaceFinder();
             this.DrawFaceGenerator();
             this.ProphetGenerator();
-            //this.ISOCrvGenerator();
-            //this.CPLCrvGenerator();
-            //this.WPLCrvGenerator();
-            //this.OctopusCascader();
+
         }
 
         public void OctopusDrawBundle()
@@ -448,13 +451,11 @@ namespace MultiCut
 
         #endregion
 
-        
     }
 
     internal class GetPointTemplate : GetPoint
     {
         protected Core coreObj;
-
         protected GetPointTemplate(Core coreobjPassed)
         {
             coreObj = coreobjPassed;
@@ -463,11 +464,11 @@ namespace MultiCut
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
         {
-            coreObj.OctopusRaw = new Dictionary<Curve, OctopusType>();
             coreObj.IsAssistKeyDown = e.ShiftKeyDown & e.ControlKeyDown;
             coreObj.CurrentPt = e.Point;
             
             int isPtOnEdge = coreObj.CurrentEdgeFinder();
+            
             if (isPtOnEdge > 0)
             {
                 coreObj.OnMouseMoveBundle();
@@ -482,6 +483,7 @@ namespace MultiCut
                                                 Rhino.ApplicationSettings.AppearanceSettings.SelectedObjectColor, 
                                                 0.5);
             
+            //Rhino.RhinoApp.WriteLine("isPtOnEdge.ToString()");
             foreach (Curve crv in coreObj.ProphetCrvs)
             {
                 e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
@@ -529,6 +531,7 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
             this.serialNumber = serialNumberPassed;
+            coreObj.OctopusRaw = new Dictionary<Curve, OctopusType>();
             coreObj.LastPt = coreObj.OctopusPtStocker[this.serialNumber];
             int isLastPtOnCrv = coreObj.LastEdgeFinder();
             if (isLastPtOnCrv > 0)
