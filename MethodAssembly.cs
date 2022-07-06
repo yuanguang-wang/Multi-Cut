@@ -559,7 +559,7 @@ namespace MultiCut
                 e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Blue);
                 this.AddConstructionPoint(element.Key.PointAtEnd);
             }
-            
+
             base.OnDynamicDraw(e);
         }
     }
