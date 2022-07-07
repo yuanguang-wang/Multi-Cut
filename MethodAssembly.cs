@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+
 using Rhino.Geometry;
 using Rhino.Geometry.Collections;
 using Rhino.Input.Custom;
@@ -234,21 +235,37 @@ namespace MultiCut
 
         private void ProphetGenerator()
         {
-            if (this.CurrentEdgeFoundList.Count != 1)
+            int currentPtStockedNumber = this.OctopusPtStocker.Count;
+            if (currentPtStockedNumber == 0)
             {
-                return;
-            }
-            BrepVertexList bVtxList = this.currentBrep.Vertices;
-            foreach (BrepVertex bVtx in bVtxList)
-            {
-                if (this.CurrentPt.DistanceTo(bVtx.Location) < this.currentDoc.ModelAbsoluteTolerance)
+                if (this.CurrentEdgeFoundList.Count != 1)
                 {
                     return;
                 }
+                this.CurrentEdgeFoundList[0].ClosestPoint(this.CurrentPt, out double p);
+                Vector3d axis = CurrentEdgeFoundList[0].TangentAt(p);
+                ProphetPlane = new Plane(this.CurrentPt, axis);
             }
-            this.CurrentEdgeFoundList[0].ClosestPoint(this.CurrentPt, out double p);
-            Vector3d axis = CurrentEdgeFoundList[0].TangentAt(p);
-            ProphetPlane = new Plane(this.CurrentPt, axis);
+            else if (currentPtStockedNumber == 1)
+            {
+                this.CurrentEdgeFoundList[0].ClosestPoint(this.OctopusPtStocker[0], out double p);
+                Vector3d axisLast = CurrentEdgeFoundList[0].TangentAt(p);
+                int isAxisVertical = axisLast.IsParallelTo(Vector3d.ZAxis);
+                if (isAxisVertical != 1)
+                {
+                    Point3d pt3rd = this.OctopusPtStocker[0] + Vector3d.ZAxis;
+                    ProphetPlane = new Plane(this.CurrentPt, this.OctopusPtStocker[0], pt3rd);
+                }
+                else
+                {
+                    ProphetPlane = new Plane(this.CurrentPt, Vector3d.ZAxis);
+                }
+            }
+            else if (currentPtStockedNumber == 2)
+            {
+                
+                
+            }
 
             Rhino.Geometry.Intersect.Intersection.BrepPlane(this.currentBrep,
                                                             this.ProphetPlane,
@@ -385,28 +402,28 @@ namespace MultiCut
             List<int> criminalIndex = new List<int>();
             List<int> allIndex = new List<int>();
 
-            List<Curve> keyList = this.OctopusRaw.Keys.ToList();
-            List<OctopusType> valueList = this.OctopusRaw.Values.ToList();
+            List<Curve> dicKeyList = this.OctopusRaw.Keys.ToList();
+            List<OctopusType> dicValueList = this.OctopusRaw.Values.ToList();
             
             for (int i = 0; i < octopusCrvList.Count; i++)
             {
                 allIndex.Add(i);
             }
-            for (int i = 0; i < this.OctopusRaw.Count - 1; i++)
+            for (int i = 0; i < this.OctopusRaw.Count; i++)
             {
                 string typeOriginal = octopusTypeList[i].ToString();
                 string typeModifeid = "";
                 typeModifeid += typeOriginal;
                 for (int j = i + 1; j < this.OctopusRaw.Count; j++)
                 {
-                    bool isCrvIdentical = GeometryBase.GeometryEquals(keyList[j], octopusCrvList[i]);
+                    bool isCrvIdentical = GeometryBase.GeometryEquals(dicKeyList[j], octopusCrvList[i]);
                     if (isCrvIdentical)
                     {
-                        if (octopusTypeList[i] != valueList[j])
+                        if (octopusTypeList[i] != dicValueList[j])
                         {
-                            if (!typeModifeid.Contains(valueList[j].ToString()))
+                            if (!typeModifeid.Contains(dicValueList[j].ToString()))
                             {
-                                typeModifeid += valueList[j].ToString();
+                                typeModifeid += dicValueList[j].ToString();
                             }
                             if (!criminalIndex.Contains(j))
                             {
@@ -482,11 +499,12 @@ namespace MultiCut
             Rhino.Display.DisplayMaterial mtl = new Rhino.Display.DisplayMaterial(
                                                 Rhino.ApplicationSettings.AppearanceSettings.SelectedObjectColor, 
                                                 0.5);
-            
-            //Rhino.RhinoApp.WriteLine("isPtOnEdge.ToString()");
-            foreach (Curve crv in coreObj.ProphetCrvs)
+            if (coreObj.ProphetCrvs != null)
             {
-                e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
+                foreach (Curve crv in coreObj.ProphetCrvs)
+                {
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
+                }
             }
             
             foreach (BrepFace bFace in coreObj.DrawFaceFoundList)
