@@ -5,6 +5,9 @@ using Rhino.Geometry;
 using Rhino.Geometry.Collections;
 using Rhino.Input.Custom;
 
+using Eto.Forms;
+using Rhino.UI;
+
 
 namespace MultiCut
 {
@@ -465,6 +468,38 @@ namespace MultiCut
             
         }
 
+        public void OctopusOverlapDispatcher()
+        {
+            Dialog<int> dispatchDialog = new Dialog<int>();
+            RadioButtonList dispatcherList = new RadioButtonList(){Orientation = Orientation.Vertical};
+
+            List<Point3d> ptOverlappedList = new List<Point3d>();
+            ListItemCollection textList = new ListItemCollection();
+
+            dispatcherList.DataStore = new ListItemCollection(textList);
+            dispatchDialog.Content = dispatcherList;
+            
+            ptOverlappedList.Add(this.LastPt);
+            foreach (KeyValuePair<Curve, string> element in this.OctopusCascade)
+            {
+                double distance = this.LastPt.DistanceTo(element.Key.PointAtEnd);
+                if (distance <= 10 * this.currentDoc.ModelAbsoluteTolerance)
+                {
+                    ptOverlappedList.Add(element.Key.PointAtEnd);
+                    textList.Add(element.Value);
+                }
+            }
+            if (ptOverlappedList.Count <= 1)
+            {
+                return;
+            }
+            dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
+            dispatchDialog.Close(dispatcherList.SelectedIndex);
+            int indexSelected = dispatchDialog.Result;
+            
+            this.OctopusPtStocker.Add(ptOverlappedList[indexSelected]);
+        }
+
 
         #endregion
 
@@ -550,12 +585,12 @@ namespace MultiCut
             coreObj = coreobjPassed;
             this.serialNumber = serialNumberPassed;
             coreObj.OctopusRaw = new Dictionary<Curve, OctopusType>();
-            coreObj.LastPt = coreObj.OctopusPtStocker[this.serialNumber];
             int isLastPtOnCrv = coreObj.LastEdgeFinder();
             if (isLastPtOnCrv > 0)
             {
                 coreObj.OctopusDrawBundle();
             }
+            coreObj.OctopusOverlapDispatcher();
 
         }
 

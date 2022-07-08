@@ -27,7 +27,7 @@ namespace MultiCut
             {
                 return getFirstPoint.CommandResult();
             }
-            core.OctopusPtStocker.Add(getFirstPoint.Point());
+            core.LastPt = getFirstPoint.Point();
             
             GetNextPoint getNextPoint = new GetNextPoint(core, 0);
             getNextPoint.SetCommandPrompt("Pick next point");
@@ -35,6 +35,14 @@ namespace MultiCut
             if (getNextPoint.CommandResult() != Rhino.Commands.Result.Success)
             {
                 return getNextPoint.CommandResult();
+            }
+            
+            GetNextPoint getNextPoint2 = new GetNextPoint(core, 1);
+            getNextPoint2.SetCommandPrompt("Pick next point");
+            getNextPoint2.Get();
+            if (getNextPoint2.CommandResult() != Rhino.Commands.Result.Success)
+            {
+                return getNextPoint2.CommandResult();
             }
             
             doc.Views.Redraw();
