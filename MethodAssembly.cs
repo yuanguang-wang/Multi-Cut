@@ -247,27 +247,17 @@ namespace MultiCut
                 }
                 this.CurrentEdgeFoundList[0].ClosestPoint(this.CurrentPt, out double p);
                 Vector3d axis = CurrentEdgeFoundList[0].TangentAt(p);
-                ProphetPlane = new Plane(this.CurrentPt, axis);
+                this.ProphetPlane = new Plane(this.CurrentPt, axis);
             }
             else if (currentPtStockedNumber == 1)
             {
-                this.CurrentEdgeFoundList[0].ClosestPoint(this.OctopusPtStocker[0], out double p);
-                Vector3d axisLast = CurrentEdgeFoundList[0].TangentAt(p);
-                int isAxisVertical = axisLast.IsParallelTo(Vector3d.ZAxis);
-                if (isAxisVertical != 1)
-                {
-                    Point3d pt3rd = this.OctopusPtStocker[0] + Vector3d.ZAxis;
-                    ProphetPlane = new Plane(this.CurrentPt, this.OctopusPtStocker[0], pt3rd);
-                }
-                else
-                {
-                    ProphetPlane = new Plane(this.CurrentPt, Vector3d.ZAxis);
-                }
+                Vector3d vec = this.CurrentPt - this.OctopusPtStocker[0];
+                this.ProphetPlane = new Plane(this.CurrentPt, vec, Vector3d.XAxis);
+                
             }
             else if (currentPtStockedNumber == 2)
             {
-                
-                
+                this.ProphetPlane = new Plane(this.CurrentPt, this.OctopusPtStocker[0], this.OctopusPtStocker[1]);
             }
 
             Rhino.Geometry.Intersect.Intersection.BrepPlane(this.currentBrep,
@@ -471,33 +461,37 @@ namespace MultiCut
         public void OctopusOverlapDispatcher()
         {
             Dialog<int> dispatchDialog = new Dialog<int>();
-            RadioButtonList dispatcherList = new RadioButtonList(){Orientation = Orientation.Vertical};
+            RadioButtonList radioButtonList = new RadioButtonList(){Orientation = Orientation.Vertical};
 
             List<Point3d> ptOverlappedList = new List<Point3d>();
-            ListItemCollection textList = new ListItemCollection();
-
-            dispatcherList.DataStore = new ListItemCollection(textList);
-            dispatchDialog.Content = dispatcherList;
+            List<string> textList = new List<string>();
+            
             
             ptOverlappedList.Add(this.LastPt);
             foreach (KeyValuePair<Curve, string> element in this.OctopusCascade)
             {
                 double distance = this.LastPt.DistanceTo(element.Key.PointAtEnd);
-                if (distance <= 10 * this.currentDoc.ModelAbsoluteTolerance)
+                if (distance <= 100000 * this.currentDoc.ModelAbsoluteTolerance)
                 {
                     ptOverlappedList.Add(element.Key.PointAtEnd);
                     textList.Add(element.Value);
                 }
             }
-            if (ptOverlappedList.Count <= 1)
+            if (ptOverlappedList.Count == 1)
             {
-                return;
+                this.OctopusPtStocker.Add(ptOverlappedList[0]);
             }
-            dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
-            dispatchDialog.Close(dispatcherList.SelectedIndex);
-            int indexSelected = dispatchDialog.Result;
+            else
+            {
+                radioButtonList.DataStore = textList;
+                dispatchDialog.Content = radioButtonList;
+                dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
+                dispatchDialog.Close(radioButtonList.SelectedIndex);
+                int indexSelected = dispatchDialog.Result;
             
-            this.OctopusPtStocker.Add(ptOverlappedList[indexSelected]);
+                this.OctopusPtStocker.Add(ptOverlappedList[indexSelected]);
+            }
+            
         }
 
 
