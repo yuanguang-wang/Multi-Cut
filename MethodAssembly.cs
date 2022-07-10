@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
+using Rhino;
 using Rhino.Geometry;
-using Rhino.Geometry.Collections;
 using Rhino.Input.Custom;
 
 using Eto.Forms;
@@ -42,7 +42,7 @@ namespace MultiCut
             return segArray.Length == 1;
         }
 
-        private static bool FarAwayFilter(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        private static bool FarAwayFilter(Curve crv, Point3d pt, RhinoDoc doc)
         {
             crv.ClosestPoint(pt, out double t);
             Point3d ptProjected = crv.PointAt(t);
@@ -54,7 +54,7 @@ namespace MultiCut
             return brep.Edges.All(bEdge => !GeometryBase.GeometryEquals(crv, bEdge));
         }
 
-        private static bool MidPtFilter(Curve crv, Point3d pt, Rhino.RhinoDoc doc, out List<Curve> crvSplitted)
+        private static bool MidPtFilter(Curve crv, Point3d pt, RhinoDoc doc, out List<Curve> crvSplitted)
         {
             crvSplitted = new List<Curve>();
             double disStart = pt.DistanceTo(crv.PointAtStart);
@@ -68,7 +68,7 @@ namespace MultiCut
             return true;
         }
         
-        private static void FlipFilter(Curve crv, Point3d pt, Rhino.RhinoDoc doc)
+        private static void FlipFilter(Curve crv, Point3d pt, RhinoDoc doc)
         {
             double disStart = pt.DistanceTo(crv.PointAtStart);
             if (disStart > doc.ModelAbsoluteTolerance)
@@ -80,7 +80,7 @@ namespace MultiCut
         public static void OctopusBundleCollector(Curve crv,
             Point3d pt,
             Brep brep,
-            Rhino.RhinoDoc doc,
+            RhinoDoc doc,
             out Dictionary<Curve, OctopusType> octopusRawDic,
             OctopusType type)
         {
@@ -107,7 +107,7 @@ namespace MultiCut
             }
         }
 
-        public static List<BrepEdge> EdgeFinder(Point3d pt, Brep brep, Rhino.RhinoDoc doc)
+        public static List<BrepEdge> EdgeFinder(Point3d pt, Brep brep, RhinoDoc doc)
         {
             List<BrepEdge> bEdgeList = new List<BrepEdge>();
             foreach (BrepEdge bEdge in brep.Edges)
@@ -146,7 +146,7 @@ namespace MultiCut
     { 
         #region FIELD
 
-        private readonly Rhino.RhinoDoc currentDoc;
+        private readonly RhinoDoc currentDoc;
         private readonly Brep currentBrep;
 
         #endregion
@@ -163,16 +163,17 @@ namespace MultiCut
         public List<BrepFace> DrawFaceFoundList { get; private set; }
         public bool IsAssistKeyDown { get; set; }
         public Point3d[] AssistPtList { get; private set; }
-        public Dictionary<Curve, OctopusType> OctopusRaw { get; set; }
+        private Dictionary<Curve, OctopusType> OctopusRaw { get; set; }
         public Dictionary<Curve, string> OctopusCascade { get; private set; }
         public List<int> OctopusBaseStocker { get; set; }
         public List<Point3d> OctopusPtStocker { get; set; }
         public Dictionary<int, List<Curve>> OctopusArmStocker { get; set; }
+        public Curve OctopusCustom { get; set; }
 
         #endregion
 
         #region CTOR
-        public Core(Rhino.RhinoDoc doc)
+        public Core(RhinoDoc doc)
         {
             this.currentDoc = doc;
             MethodBasic.ObjectCollecter(out this.currentBrep);
@@ -384,6 +385,11 @@ namespace MultiCut
             }
         }
 
+        private void OctopusRawGenerator()
+        {
+            this.OctopusRaw = new Dictionary<Curve, OctopusType>();
+        }
+
         private void OctopusCascader()
         {
             this.OctopusCascade = new Dictionary<Curve, string>();
@@ -436,7 +442,7 @@ namespace MultiCut
             }
         }
 
-        public void OnMouseMoveBundle()
+        public void OnMouseMoveTemplateBundle()
         {
             this.CurrentFaceFinder();
             this.DrawFaceGenerator();
@@ -447,6 +453,7 @@ namespace MultiCut
         public void OctopusDrawBundle()
         {
             this.LastFaceFinder();
+            this.OctopusRawGenerator();
             this.ISOCrvGenerator();
             this.CPLCrvGenerator();
             this.WPLCrvGenerator();
@@ -460,40 +467,65 @@ namespace MultiCut
 
         public void OctopusOverlapDispatcher()
         {
-            Dialog<int> dispatchDialog = new Dialog<int>();
-            RadioButtonList radioButtonList = new RadioButtonList(){Orientation = Orientation.Vertical};
+            int cascadeIndex = 1;
+            
+            Dialog<int> dispatchDialog = new Dialog<int>(){WindowStyle = WindowStyle.None};
+            DynamicLayout dispatchLayout = new DynamicLayout();
+            List<Button> candidateButtonList = new List<Button>();
 
-            List<Point3d> ptOverlappedList = new List<Point3d>();
             List<string> textList = new List<string>();
+            List<int> indexList = new List<int>();
+            textList.Add("CUSTOM");
+            indexList.Add(0);
             
-            
-            ptOverlappedList.Add(this.LastPt);
             foreach (KeyValuePair<Curve, string> element in this.OctopusCascade)
             {
                 double distance = this.LastPt.DistanceTo(element.Key.PointAtEnd);
-                if (distance <= 100000 * this.currentDoc.ModelAbsoluteTolerance)
+                if (distance <= 100 * this.currentDoc.ModelAbsoluteTolerance)
                 {
-                    ptOverlappedList.Add(element.Key.PointAtEnd);
                     textList.Add(element.Value);
+                    indexList.Add(cascadeIndex);
                 }
+                cascadeIndex++;
             }
-            if (ptOverlappedList.Count == 1)
+            for (int i = 0; i < indexList.Count; i++)
             {
-                this.OctopusPtStocker.Add(ptOverlappedList[0]);
+                Button candidateButton = new Button() { Text = textList[i], BackgroundColor = Eto.Drawing.Colors.White};
+                int j = i;
+                candidateButton.Click += (sender, e) => dispatchDialog.Close(indexList[j]);
+                candidateButtonList.Add(candidateButton);
+            }
+            // ReSharper disable once CoVariantArrayConversion
+            dispatchLayout.AddColumn(candidateButtonList.ToArray());
+            dispatchDialog.Content = dispatchLayout;
+
+            if (indexList.Count == 1)
+            {
+                this.OctopusPtStocker.Add(this.LastPt);
             }
             else
             {
-                radioButtonList.DataStore = textList;
-                dispatchDialog.Content = radioButtonList;
-                dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
-                dispatchDialog.Close(radioButtonList.SelectedIndex);
-                int indexSelected = dispatchDialog.Result;
+                RhinoApp.WriteLine("Overlapping detected, pick one curve to continue.");
+                int indexSelcted = dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
+                RhinoApp.WriteLine(indexSelcted.ToString());
             
-                this.OctopusPtStocker.Add(ptOverlappedList[indexSelected]);
+                //this.OctopusPtStocker.Add(ptOverlappedList[indexSelected]);
             }
             
         }
 
+        public void OctopusCustomGenerator()
+        {
+            int isPtOnCrv = this.CurrentEdgeFinder();
+            if (isPtOnCrv == 0)
+            {
+                this.OctopusCustom = new LineCurve(this.LastPt, this.CurrentPt);
+            }
+            else
+            {
+                
+            }
+        }
 
         #endregion
 
@@ -517,7 +549,7 @@ namespace MultiCut
             
             if (isPtOnEdge > 0)
             {
-                coreObj.OnMouseMoveBundle();
+                coreObj.OnMouseMoveTemplateBundle();
             }
             
             base.OnMouseMove(e);
@@ -568,31 +600,25 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
         }
-
     }
 
     internal class GetNextPoint : GetPointTemplate
     {
-        private readonly int serialNumber;
-        public GetNextPoint(Core coreobjPassed, int serialNumberPassed) : base(coreobjPassed)
+        public GetNextPoint(Core coreobjPassed) : base(coreobjPassed)
         {
             coreObj = coreobjPassed;
-            this.serialNumber = serialNumberPassed;
-            coreObj.OctopusRaw = new Dictionary<Curve, OctopusType>();
+            if (coreObj.OctopusCascade != null)
+            {
+                coreObj.OctopusOverlapDispatcher();
+            }
             int isLastPtOnCrv = coreObj.LastEdgeFinder();
             if (isLastPtOnCrv > 0)
             {
                 coreObj.OctopusDrawBundle();
             }
-            coreObj.OctopusOverlapDispatcher();
-
+            
         }
-
-        protected override void OnMouseMove(GetPointMouseEventArgs e)
-        {
-            base.OnMouseMove(e);
-        }
-
+        
         protected override void OnDynamicDraw(GetPointDrawEventArgs e)
         {
             foreach (Curve crv in coreObj.OctopusCascade.Keys)

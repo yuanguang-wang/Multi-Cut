@@ -29,7 +29,7 @@ namespace MultiCut
             }
             core.LastPt = getFirstPoint.Point();
             
-            GetNextPoint getNextPoint = new GetNextPoint(core, 0);
+            GetNextPoint getNextPoint = new GetNextPoint(core);
             getNextPoint.SetCommandPrompt("Pick next point");
             getNextPoint.Get();
             if (getNextPoint.CommandResult() != Rhino.Commands.Result.Success)
@@ -38,7 +38,7 @@ namespace MultiCut
             }
             core.LastPt = getNextPoint.Point();
 
-            GetNextPoint getNextPoint2 = new GetNextPoint(core, 1);
+            GetNextPoint getNextPoint2 = new GetNextPoint(core);
             getNextPoint2.SetCommandPrompt("Pick next point");
             getNextPoint2.Get();
             if (getNextPoint2.CommandResult() != Rhino.Commands.Result.Success)

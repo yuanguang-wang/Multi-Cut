@@ -4,16 +4,16 @@ import System
 import rhinoscriptsyntax as rs
 
 def test_command():
-    list = ["_ISOV","_CPLZ","_WPLX"]
-    test = Rhino.UI.Dialogs.ShowMultiListBox("title","select the point", list)
-    print(test)
-    crv = rs.coercecurve(rs.GetObject())
-    mp = crv.PointAtLength(1400.0)
-    gp = Rhino.Input.Custom.GetPoint()
-    gp.AddConstructionPoint(mp)
-    #gp.EnableCurveSnapArrow(True,False)
-    gp.Get()
-    sc.doc.Objects.AddPoint(mp)
+    srf = rs.coercesurface(rs.GetObject("srf"))
+    pt1 = rs.coerce3dpoint(rs.GetObject("pt1"))
+    pt2 = rs.coerce3dpoint(rs.GetObject("pt2"))
+    ptlist = []
+    ptlist.append(pt1)
+    ptlist.append(pt2)
+    linecurve = Rhino.Geometry.LineCurve(pt1, pt2)
+    
+    crv = srf.Pullback(linecurve, 1.00)
+    sc.doc.Objects.Add(crv)
     sc.doc.Views.Redraw()
 
 if __name__ == "__main__":
