@@ -42,11 +42,19 @@ namespace MultiCut
             return segArray.Length == 1;
         }
 
-        private static bool FarAwayFilter(Curve crv, Point3d pt, RhinoDoc doc)
+        private static bool OnEdgeFilter(Curve crv, Point3d pt, RhinoDoc doc)
         {
             crv.ClosestPoint(pt, out double t);
             Point3d ptProjected = crv.PointAt(t);
             return ptProjected.DistanceTo(pt) < doc.ModelAbsoluteTolerance;
+        }
+
+        public static bool OnLoopFilter(Brep brep, int faceIndex, Point3d startpt, Point3d endpt, RhinoDoc doc)
+        {
+            Curve outerLoop = brep.Faces[faceIndex].OuterLoop.To3dCurve();
+            bool isStartPtOnLoop = OnEdgeFilter(outerLoop, startpt, doc);
+            bool isEndPtOnLoop = OnEdgeFilter(outerLoop, endpt, doc);
+            return isStartPtOnLoop & isEndPtOnLoop;
         }
 
         private static bool EdgeDupFilter(Curve crv, Brep brep)
@@ -86,7 +94,7 @@ namespace MultiCut
         {
             octopusRawDic = new Dictionary<Curve, OctopusType>();
             bool isCrvSingle = PolylineFilter(crv);
-            bool isPtOnCrv = FarAwayFilter(crv, pt, doc);
+            bool isPtOnCrv = OnEdgeFilter(crv, pt, doc);
             bool isCrvDuped = EdgeDupFilter(crv, brep);
             if (isCrvSingle & isPtOnCrv & isCrvDuped)
             {
@@ -523,7 +531,18 @@ namespace MultiCut
             }
             else
             {
-                
+                foreach (int i in CurrentFaceFoundIndexList)
+                {
+                    bool isPtOnSrf = MethodBasic.OnLoopFilter(this.currentBrep, i, this.CurrentPt, this.LastPt,
+                                     this.currentDoc);
+                    if (isPtOnSrf)
+                    {
+                        List<Point3d> ptList = new List<Point3d>(){this.LastPt, this.CurrentPt};
+                        this.OctopusCustom = this.currentBrep.Faces[i].
+                                             InterpolatedCurveOnSurface(ptList, this.currentDoc.ModelAbsoluteTolerance);
+                        break;
+                    }
+                }
             }
         }
 
@@ -618,7 +637,13 @@ namespace MultiCut
             }
             
         }
-        
+
+        protected override void OnMouseMove(GetPointMouseEventArgs e)
+        {
+            coreObj.OctopusCustomGenerator();
+            base.OnMouseMove(e);
+        }
+
         protected override void OnDynamicDraw(GetPointDrawEventArgs e)
         {
             foreach (Curve crv in coreObj.OctopusCascade.Keys)
@@ -631,6 +656,11 @@ namespace MultiCut
                 e.Display.Draw2dText(element.Value, System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
                 e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Blue);
                 this.AddConstructionPoint(element.Key.PointAtEnd);
+            }
+
+            if (coreObj.OctopusCustom != null)
+            {
+                e.Display.DrawCurve(coreObj.OctopusCustom, System.Drawing.Color.Blue, 3);
             }
 
             base.OnDynamicDraw(e);
