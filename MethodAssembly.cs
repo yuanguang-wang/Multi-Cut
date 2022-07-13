@@ -163,7 +163,8 @@ namespace MultiCut
         public Curve[] ProphetCrvs { get; private set; }
         private Plane ProphetPlane { get; set; }
         public Point3d CurrentPt { get; set; }
-        public Point3d LastPt { get; set; }
+        private Point3d LastPt { get; set; }
+        public Point3d LastPtCandidate { get; set; }
         private List<BrepEdge> CurrentEdgeFoundList { get; set; }
         private List<BrepEdge> LastEdgeFoundList { get; set; }
         private List<int> CurrentFaceFoundIndexList { get; set; }
@@ -186,9 +187,14 @@ namespace MultiCut
             this.currentDoc = doc;
             MethodBasic.ObjectCollecter(out this.currentBrep);
 
-            OctopusArmStocker = new Dictionary<int, List<Curve>>();
-            OctopusBaseStocker = new List<int>();
-            OctopusPtStocker = new List<Point3d>();
+            this.OctopusArmStocker = new Dictionary<int, List<Curve>>();
+            this.OctopusBaseStocker = new List<int>();
+            this.OctopusPtStocker = new List<Point3d>();
+
+            if (OctopusPtStocker.Count > 0)
+            {
+                this.LastPt = this.OctopusPtStocker.Last();
+            }
         }
         #endregion
 
@@ -483,12 +489,14 @@ namespace MultiCut
 
             List<string> textList = new List<string>();
             List<int> indexList = new List<int>();
-            textList.Add("CUSTOM");
+            textList.Add("_IPL");
             indexList.Add(0);
-            
+
+            List<Curve> keyList = this.OctopusCascade.Keys.ToList();
+
             foreach (KeyValuePair<Curve, string> element in this.OctopusCascade)
             {
-                double distance = this.LastPt.DistanceTo(element.Key.PointAtEnd);
+                double distance = this.LastPtCandidate.DistanceTo(element.Key.PointAtEnd);
                 if (distance <= 100 * this.currentDoc.ModelAbsoluteTolerance)
                 {
                     textList.Add(element.Value);
@@ -509,7 +517,7 @@ namespace MultiCut
 
             if (indexList.Count == 1)
             {
-                this.OctopusPtStocker.Add(this.LastPt);
+                this.OctopusPtStocker.Add(this.LastPtCandidate);
             }
             else
             {
@@ -517,7 +525,7 @@ namespace MultiCut
                 int indexSelcted = dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
                 RhinoApp.WriteLine(indexSelcted.ToString());
             
-                //this.OctopusPtStocker.Add(ptOverlappedList[indexSelected]);
+                this.OctopusPtStocker.Add(keyList[indexSelcted].PointAtEnd);
             }
             
         }
