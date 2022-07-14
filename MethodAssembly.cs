@@ -190,15 +190,71 @@ namespace MultiCut
             this.OctopusArmStocker = new Dictionary<int, List<Curve>>();
             this.OctopusBaseStocker = new List<int>();
             this.OctopusPtStocker = new List<Point3d>();
-
-            if (OctopusPtStocker.Count > 0)
-            {
-                this.LastPt = this.OctopusPtStocker.Last();
-            }
+            
         }
         #endregion
 
         #region MTHD
+        
+        public void OctopusOverlapDispatcher()
+        {
+            if (this.OctopusPtStocker.Count == 0)
+            {
+                this.OctopusPtStocker.Add(this.LastPtCandidate);
+            }
+            else
+            {
+                int cascadeIndex = 1;
+            
+                Dialog<int> dispatchDialog = new Dialog<int>(){WindowStyle = WindowStyle.None};
+                DynamicLayout dispatchLayout = new DynamicLayout();
+                List<Button> candidateButtonList = new List<Button>();
+
+                List<string> textList = new List<string>();
+                List<int> indexList = new List<int>();
+                textList.Add("_IPL");
+                indexList.Add(0);
+
+                List<Curve> keyList = this.OctopusCascade.Keys.ToList();
+
+                foreach (KeyValuePair<Curve, string> element in this.OctopusCascade)
+                {
+                    double distance = this.LastPtCandidate.DistanceTo(element.Key.PointAtEnd);
+                    if (distance <= 100 * this.currentDoc.ModelAbsoluteTolerance)
+                    {
+                        textList.Add(element.Value);
+                        indexList.Add(cascadeIndex);
+                    }
+                    cascadeIndex++;
+                }
+                for (int i = 0; i < indexList.Count; i++)
+                {
+                    Button candidateButton = new Button() { Text = textList[i], BackgroundColor = Eto.Drawing.Colors.White};
+                    int j = i;
+                    candidateButton.Click += (sender, e) => dispatchDialog.Close(indexList[j] - 1);
+                    candidateButtonList.Add(candidateButton);
+                }
+                // ReSharper disable once CoVariantArrayConversion
+                dispatchLayout.AddColumn(candidateButtonList.ToArray());
+                dispatchDialog.Content = dispatchLayout;
+
+                if (indexList.Count == 1)
+                {
+                    this.OctopusPtStocker.Add(this.LastPtCandidate);
+                }
+                else
+                {
+                    RhinoApp.WriteLine("Overlapping detected, pick one curve to continue.");
+                    int indexSelcted = dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
+                    RhinoApp.WriteLine(indexSelcted.ToString());
+            
+                    this.OctopusPtStocker.Add(keyList[indexSelcted].PointAtEnd);
+                }
+            }
+            
+            this.LastPt = this.OctopusPtStocker.Last();
+        }
+        
         public int CurrentEdgeFinder()
         {
             this.CurrentEdgeFoundList = new List<BrepEdge>();
@@ -479,57 +535,6 @@ namespace MultiCut
             
         }
 
-        public void OctopusOverlapDispatcher()
-        {
-            int cascadeIndex = 1;
-            
-            Dialog<int> dispatchDialog = new Dialog<int>(){WindowStyle = WindowStyle.None};
-            DynamicLayout dispatchLayout = new DynamicLayout();
-            List<Button> candidateButtonList = new List<Button>();
-
-            List<string> textList = new List<string>();
-            List<int> indexList = new List<int>();
-            textList.Add("_IPL");
-            indexList.Add(0);
-
-            List<Curve> keyList = this.OctopusCascade.Keys.ToList();
-
-            foreach (KeyValuePair<Curve, string> element in this.OctopusCascade)
-            {
-                double distance = this.LastPtCandidate.DistanceTo(element.Key.PointAtEnd);
-                if (distance <= 100 * this.currentDoc.ModelAbsoluteTolerance)
-                {
-                    textList.Add(element.Value);
-                    indexList.Add(cascadeIndex);
-                }
-                cascadeIndex++;
-            }
-            for (int i = 0; i < indexList.Count; i++)
-            {
-                Button candidateButton = new Button() { Text = textList[i], BackgroundColor = Eto.Drawing.Colors.White};
-                int j = i;
-                candidateButton.Click += (sender, e) => dispatchDialog.Close(indexList[j]);
-                candidateButtonList.Add(candidateButton);
-            }
-            // ReSharper disable once CoVariantArrayConversion
-            dispatchLayout.AddColumn(candidateButtonList.ToArray());
-            dispatchDialog.Content = dispatchLayout;
-
-            if (indexList.Count == 1)
-            {
-                this.OctopusPtStocker.Add(this.LastPtCandidate);
-            }
-            else
-            {
-                RhinoApp.WriteLine("Overlapping detected, pick one curve to continue.");
-                int indexSelcted = dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
-                RhinoApp.WriteLine(indexSelcted.ToString());
-            
-                this.OctopusPtStocker.Add(keyList[indexSelcted].PointAtEnd);
-            }
-            
-        }
-
         public void OctopusCustomGenerator()
         {
             int isPtOnCrv = this.CurrentEdgeFinder();
@@ -634,10 +639,8 @@ namespace MultiCut
         public GetNextPoint(Core coreobjPassed) : base(coreobjPassed)
         {
             coreObj = coreobjPassed;
-            if (coreObj.OctopusCascade != null)
-            {
-                coreObj.OctopusOverlapDispatcher();
-            }
+            coreObj.OctopusOverlapDispatcher();
+
             int isLastPtOnCrv = coreObj.LastEdgeFinder();
             if (isLastPtOnCrv > 0)
             {
