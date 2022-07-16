@@ -131,19 +131,17 @@ namespace MultiCut
             return bEdgeList;
         }
 
-        public static List<int> FaceFinder(List<BrepEdge> bEdgeList)
+        public static List<int> FaceFinder(IEnumerable<BrepEdge> bEdgeList)
         {
             List<int> faceIndexList = new List<int>();
-            foreach (BrepEdge bEdge in bEdgeList)
+            foreach (int faceindex in 
+                     from bEdge in bEdgeList 
+                     select bEdge.AdjacentFaces() into faceIndexArray 
+                     from faceindex in faceIndexArray 
+                     where !faceIndexList.Contains(faceindex) 
+                     select faceindex)
             {
-                int[] faceIndexArray = bEdge.AdjacentFaces();
-                foreach (int faceindex in faceIndexArray)
-                {
-                    if (!faceIndexList.Contains(faceindex))
-                    {
-                        faceIndexList.Add(faceindex);
-                    }
-                }
+                faceIndexList.Add(faceindex);
             }
             return faceIndexList;
         }
@@ -212,7 +210,7 @@ namespace MultiCut
 
                 List<string> textList = new List<string>();
                 List<int> indexList = new List<int>();
-                textList.Add("_IPL");
+                textList.Add("_ITPL");
                 indexList.Add(0);
 
                 List<Curve> keyList = this.OctopusCascade.Keys.ToList();
@@ -231,7 +229,7 @@ namespace MultiCut
                 {
                     Button candidateButton = new Button() { Text = textList[i], BackgroundColor = Eto.Drawing.Colors.White};
                     int j = i;
-                    candidateButton.Click += (sender, e) => dispatchDialog.Close(indexList[j] - 1);
+                    candidateButton.Click += (sender, e) => dispatchDialog.Close(indexList[j]);
                     candidateButtonList.Add(candidateButton);
                 }
                 // ReSharper disable once CoVariantArrayConversion
@@ -247,8 +245,9 @@ namespace MultiCut
                     RhinoApp.WriteLine("Overlapping detected, pick one curve to continue.");
                     int indexSelcted = dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
                     RhinoApp.WriteLine(indexSelcted.ToString());
-            
-                    this.OctopusPtStocker.Add(keyList[indexSelcted].PointAtEnd);
+                    this.OctopusPtStocker.Add(indexSelcted == 0
+                        ? this.LastPtCandidate
+                        : keyList[indexSelcted - 1].PointAtEnd);
                 }
             }
             
@@ -283,15 +282,9 @@ namespace MultiCut
         private void DrawFaceGenerator()
         {
             this.DrawFaceFoundList = new List<BrepFace>();
-            List<int> drawFaceFoundIndexList;
-            if (this.LastFaceFoundIndexList == null)
-            {
-                drawFaceFoundIndexList = this.CurrentFaceFoundIndexList;
-            }
-            else
-            {
-                drawFaceFoundIndexList = this.CurrentFaceFoundIndexList.Union(this.LastFaceFoundIndexList).ToList();
-            }
+            List<int> drawFaceFoundIndexList = this.LastFaceFoundIndexList == null 
+                                             ? this.CurrentFaceFoundIndexList 
+                                             : this.CurrentFaceFoundIndexList.Union(this.LastFaceFoundIndexList).ToList();
             foreach (int index in drawFaceFoundIndexList)
             {
                 this.DrawFaceFoundList.Add(this.currentBrep.Faces[index]);
@@ -341,17 +334,18 @@ namespace MultiCut
 
         private void ISOCrvGenerator()
         {
-            foreach (int bFaceIndex in this.LastFaceFoundIndexList)
+            foreach (BrepFace bFace in 
+                     this.LastFaceFoundIndexList.Select
+                         (bFaceIndex => this.currentBrep.Faces[bFaceIndex]))
             {
-                BrepFace bFace = this.currentBrep.Faces[bFaceIndex];
                 bFace.ClosestPoint(this.LastPt, out double u, out double v);
                 Curve[] isou = bFace.TrimAwareIsoCurve(1, u);
                 Curve[] isov = bFace.TrimAwareIsoCurve(0, v);
                 foreach (Curve iso in isou)
                 {
                     MethodBasic.OctopusBundleCollector(iso, this.LastPt, this.currentBrep, this.currentDoc,
-                                                       out Dictionary<Curve, OctopusType> octopusRawDic, 
-                                                       OctopusType._ISOU);
+                        out Dictionary<Curve, OctopusType> octopusRawDic, 
+                        OctopusType._ISOU);
                     foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
                     {
                         this.OctopusRaw.Add(element.Key, element.Value);
@@ -360,8 +354,8 @@ namespace MultiCut
                 foreach (Curve iso in isov)
                 {
                     MethodBasic.OctopusBundleCollector(iso, this.LastPt, this.currentBrep, this.currentDoc,
-                                                       out Dictionary<Curve, OctopusType> octopusRawDic, 
-                                                       OctopusType._ISOV);
+                        out Dictionary<Curve, OctopusType> octopusRawDic, 
+                        OctopusType._ISOV);
                     foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
                     {
                         this.OctopusRaw.Add(element.Key, element.Value);
@@ -440,7 +434,6 @@ namespace MultiCut
                     {
                         foreach (Curve crv in intersecrtionCrvs)
                         {
-
                             MethodBasic.OctopusBundleCollector(crv, this.LastPt, this.currentBrep, this.currentDoc,
                                                                out Dictionary<Curve, OctopusType> octopusRawDic, 
                                                                wplType[i]);
