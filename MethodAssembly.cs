@@ -171,11 +171,12 @@ namespace MultiCut
         public bool IsAssistKeyDown { get; set; }
         public Point3d[] AssistPtList { get; private set; }
         private Dictionary<Curve, OctopusType> OctopusRaw { get; set; }
+        private Dictionary<Curve, int> OctopusBaseRaw { get; set; }
         public Dictionary<Curve, string> OctopusCascade { get; private set; }
-        public List<int> OctopusBaseStocker { get; set; }
-        public List<Point3d> OctopusPtStocker { get; set; }
-        public Dictionary<int, List<Curve>> OctopusArmStocker { get; set; }
-        public Curve OctopusCustom { get; set; }
+        private Dictionary<Curve, int> OctopusBaseCascade { get; set; }
+        public List<Point3d> OctopusPtStocker { get; }
+        public Dictionary<int, List<Curve>> OctopusArmStocker { get; }
+        public KeyValuePair<Curve, int> OctopusCustom { get; set; }
 
         #endregion
 
@@ -186,8 +187,14 @@ namespace MultiCut
             MethodBasic.ObjectCollecter(out this.currentBrep);
 
             this.OctopusArmStocker = new Dictionary<int, List<Curve>>();
-            this.OctopusBaseStocker = new List<int>();
             this.OctopusPtStocker = new List<Point3d>();
+
+            foreach (BrepFace bFace in this.currentBrep.Faces)
+            {
+                int faceIndex = bFace.FaceIndex;
+                List<Curve> crvListHolder = new List<Curve>();
+                this.OctopusArmStocker.Add(faceIndex, crvListHolder);
+            }
             
         }
         #endregion
@@ -349,6 +356,7 @@ namespace MultiCut
                     foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
                     {
                         this.OctopusRaw.Add(element.Key, element.Value);
+                        this.OctopusBaseRaw.Add(element.Key, bFace.FaceIndex);
                     }
                 }
                 foreach (Curve iso in isov)
@@ -359,6 +367,7 @@ namespace MultiCut
                     foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
                     {
                         this.OctopusRaw.Add(element.Key, element.Value);
+                        this.OctopusBaseRaw.Add(element.Key, bFace.FaceIndex);
                     }
                 }
             }
@@ -402,6 +411,7 @@ namespace MultiCut
                             foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
                             {
                                 this.OctopusRaw.Add(element.Key, element.Value);
+                                this.OctopusBaseRaw.Add(element.Key, bFace.FaceIndex);
                             }
                         }
                     }
@@ -440,6 +450,7 @@ namespace MultiCut
                             foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
                             {
                                 this.OctopusRaw.Add(element.Key, element.Value);
+                                this.OctopusBaseRaw.Add(element.Key, bFace.FaceIndex);
                             }
                         }
                     }
@@ -451,14 +462,18 @@ namespace MultiCut
         private void OctopusRawGenerator()
         {
             this.OctopusRaw = new Dictionary<Curve, OctopusType>();
+            this.OctopusBaseRaw = new Dictionary<Curve, int>();
         }
 
         private void OctopusCascader()
         {
             this.OctopusCascade = new Dictionary<Curve, string>();
+            this.OctopusBaseCascade = new Dictionary<Curve, int>();
             
             List<Curve> octopusCrvList = this.OctopusRaw.Keys.ToList();
             List<OctopusType> octopusTypeList = this.OctopusRaw.Values.ToList();
+            List<int> octopusBaseList = this.OctopusBaseRaw.Values.ToList();
+            
             List<string> octopusTypeStrList = new List<string>();
             
             List<int> criminalIndex = new List<int>();
@@ -502,6 +517,8 @@ namespace MultiCut
             foreach (int index in clearIndexList)
             {
                 this.OctopusCascade.Add(octopusCrvList[index], octopusTypeStrList[index]);
+                this.OctopusBaseCascade.Add(octopusCrvList[index], octopusBaseList[index]);
+                
             }
         }
 
@@ -523,33 +540,28 @@ namespace MultiCut
             this.OctopusCascader();
         }
 
-        public void OctopusArmCollector(Point3d pt)
-        {
-            
-        }
-
         public void OctopusCustomGenerator()
         {
-            int isPtOnCrv = this.CurrentEdgeFinder();
-            if (isPtOnCrv == 0)
+            foreach (int i in CurrentFaceFoundIndexList)
             {
-                this.OctopusCustom = new LineCurve(this.LastPt, this.CurrentPt);
-            }
-            else
-            {
-                foreach (int i in CurrentFaceFoundIndexList)
+                bool isPtOnSrf = MethodBasic.OnLoopFilter(this.currentBrep, i, this.CurrentPt, this.LastPt,
+                                 this.currentDoc);
+                if (isPtOnSrf)
                 {
-                    bool isPtOnSrf = MethodBasic.OnLoopFilter(this.currentBrep, i, this.CurrentPt, this.LastPt,
-                                     this.currentDoc);
-                    if (isPtOnSrf)
-                    {
-                        List<Point3d> ptList = new List<Point3d>(){this.LastPt, this.CurrentPt};
-                        this.OctopusCustom = this.currentBrep.Faces[i].
+                    List<Point3d> ptList = new List<Point3d>(){this.LastPt, this.CurrentPt};
+                    Curve octopusArmCustom = this.currentBrep.Faces[i].
                                              InterpolatedCurveOnSurface(ptList, this.currentDoc.ModelAbsoluteTolerance);
-                        break;
-                    }
+                    
+                    this.OctopusCustom = new KeyValuePair<Curve, int>(octopusArmCustom, i);
+                    break;
                 }
             }
+            
+        }
+        
+        public void OctopusArmCollector(KeyValuePair<Curve, int> pair)
+        {
+            
         }
 
         #endregion
@@ -662,9 +674,9 @@ namespace MultiCut
                 this.AddConstructionPoint(element.Key.PointAtEnd);
             }
 
-            if (coreObj.OctopusCustom != null)
+            if (coreObj.OctopusCustom.Key != null)
             {
-                e.Display.DrawCurve(coreObj.OctopusCustom, System.Drawing.Color.Blue, 3);
+                e.Display.DrawCurve(coreObj.OctopusCustom.Key, System.Drawing.Color.Blue, 3);
             }
 
             base.OnDynamicDraw(e);
