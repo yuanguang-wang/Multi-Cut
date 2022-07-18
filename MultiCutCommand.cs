@@ -1,4 +1,5 @@
-﻿using Rhino;
+﻿using System.Linq;
+using Rhino;
 
 namespace MultiCut
 {
@@ -21,31 +22,27 @@ namespace MultiCut
             Core core = new Core(doc);
             
             GetFirstPoint getFirstPoint = new GetFirstPoint(core);
-            getFirstPoint.SetCommandPrompt("Pick the first point");
             getFirstPoint.Get();
             if (getFirstPoint.CommandResult() != Rhino.Commands.Result.Success)
             {
                 return getFirstPoint.CommandResult();
             }
             core.LastPtCandidate = getFirstPoint.Point();
-            
-            GetNextPoint getNextPoint = new GetNextPoint(core);
-            getNextPoint.SetCommandPrompt("Pick next point");
-            getNextPoint.Get();
-            if (getNextPoint.CommandResult() != Rhino.Commands.Result.Success)
-            {
-                return getNextPoint.CommandResult();
-            }
-            core.LastPtCandidate = getNextPoint.Point();
 
-            GetNextPoint getNextPoint2 = new GetNextPoint(core);
-            getNextPoint2.SetCommandPrompt("Pick next point");
-            getNextPoint2.Get();
-            if (getNextPoint2.CommandResult() != Rhino.Commands.Result.Success)
+            while ((from bool boolean in core.OnLoopList where boolean == false select boolean).Count() < 2)
             {
-                return getNextPoint2.CommandResult();
+                GetNextPoint getNextPoint = new GetNextPoint(core);
+                getNextPoint.Get();
+                if (getNextPoint.CommandResult() != Rhino.Commands.Result.Success)
+                {
+                    return getNextPoint.CommandResult();
+                }
+                core.LastPtCandidate = getNextPoint.Point();
             }
-            core.LastPtCandidate = getNextPoint2.Point();
+            
+            
+
+
             
             doc.Views.Redraw();
             return Rhino.Commands.Result.Success;

@@ -167,16 +167,18 @@ namespace MultiCut
         private List<BrepEdge> LastEdgeFoundList { get; set; }
         private List<int> CurrentFaceFoundIndexList { get; set; }
         private List<int> LastFaceFoundIndexList { get; set; }
-        public List<BrepFace> DrawFaceFoundList { get; private set; }
+        public List<BrepFace> FaceFoundDrawList { get; private set; }
         public bool IsAssistKeyDown { get; set; }
         public Point3d[] AssistPtList { get; private set; }
         private Dictionary<Curve, OctopusType> OctopusRaw { get; set; }
         private Dictionary<Curve, int> OctopusBaseRaw { get; set; }
         public Dictionary<Curve, string> OctopusCascade { get; private set; }
         private Dictionary<Curve, int> OctopusBaseCascade { get; set; }
-        public List<Point3d> OctopusPtStocker { get; }
-        public Dictionary<int, List<Curve>> OctopusArmStocker { get; }
-        public KeyValuePair<Curve, int> OctopusCustom { get; set; }
+        private List<Point3d> OctopusPtStocker { get; }
+        private Dictionary<int, List<Curve>> OctopusArmStocker { get; }
+        public List<Curve> OctopusStockedDrawList { get; }
+        public KeyValuePair<Curve, int> OctopusCustom { get; private set; }
+        public List<bool> OnLoopList { get; }
 
         #endregion
 
@@ -188,6 +190,8 @@ namespace MultiCut
 
             this.OctopusArmStocker = new Dictionary<int, List<Curve>>();
             this.OctopusPtStocker = new List<Point3d>();
+            this.OctopusStockedDrawList = new List<Curve>();
+            this.OnLoopList = new List<bool>();
 
             foreach (BrepFace bFace in this.currentBrep.Faces)
             {
@@ -201,7 +205,7 @@ namespace MultiCut
 
         #region MTHD
         
-        public void OctopusOverlapDispatcher()
+        private void OctopusOverlapDispatcher()
         {
             if (this.OctopusPtStocker.Count == 0)
             {
@@ -232,6 +236,7 @@ namespace MultiCut
                     }
                     cascadeIndex++;
                 }
+                
                 for (int i = 0; i < indexList.Count; i++)
                 {
                     Button candidateButton = new Button() { Text = textList[i], BackgroundColor = Eto.Drawing.Colors.White};
@@ -246,21 +251,48 @@ namespace MultiCut
                 if (indexList.Count == 1)
                 {
                     this.OctopusPtStocker.Add(this.LastPtCandidate);
+                    this.OctopusArmCollector(this.OctopusCustom);
+                    this.OctopusStockedDrawList.Add(this.OctopusCustom.Key);
                 }
                 else
                 {
                     RhinoApp.WriteLine("Overlapping detected, pick one curve to continue.");
                     int indexSelcted = dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
-                    RhinoApp.WriteLine(indexSelcted.ToString());
+
+                    Curve targetCrv = keyList[indexSelcted - 1];
                     this.OctopusPtStocker.Add(indexSelcted == 0
                         ? this.LastPtCandidate
-                        : keyList[indexSelcted - 1].PointAtEnd);
+                        : targetCrv.PointAtEnd);
+
+                    KeyValuePair<Curve, int> pair = new KeyValuePair<Curve, int>(targetCrv, this.OctopusBaseCascade[targetCrv]);
+                    this.OctopusArmCollector(pair);
+                    this.OctopusStockedDrawList.Add(targetCrv);
                 }
             }
             
             this.LastPt = this.OctopusPtStocker.Last();
         }
         
+        private void IsPtOnLoopDispatcher()
+        {
+            foreach (bool isPtOnSrf in 
+                     CurrentFaceFoundIndexList.Select
+                     (i => MethodBasic.OnLoopFilter
+                         (this.currentBrep, i, this.CurrentPt, this.LastPt, this.currentDoc)
+                     )
+                    )
+            {
+                this.OnLoopList.Add(isPtOnSrf);
+                break;
+            }
+        }
+
+        public void GetPtDispatchBundle()
+        {
+            this.OctopusOverlapDispatcher();
+            this.IsPtOnLoopDispatcher();
+        }
+
         public int CurrentEdgeFinder()
         {
             this.CurrentEdgeFoundList = new List<BrepEdge>();
@@ -288,13 +320,13 @@ namespace MultiCut
 
         private void DrawFaceGenerator()
         {
-            this.DrawFaceFoundList = new List<BrepFace>();
+            this.FaceFoundDrawList = new List<BrepFace>();
             List<int> drawFaceFoundIndexList = this.LastFaceFoundIndexList == null 
                                              ? this.CurrentFaceFoundIndexList 
                                              : this.CurrentFaceFoundIndexList.Union(this.LastFaceFoundIndexList).ToList();
             foreach (int index in drawFaceFoundIndexList)
             {
-                this.DrawFaceFoundList.Add(this.currentBrep.Faces[index]);
+                this.FaceFoundDrawList.Add(this.currentBrep.Faces[index]);
             }
         }
 
@@ -521,8 +553,26 @@ namespace MultiCut
                 
             }
         }
+        
+        public void OctopusCustomGenerator()
+        {
+            foreach (int i in CurrentFaceFoundIndexList)
+            {
+                bool isPtOnSrf = MethodBasic.OnLoopFilter(this.currentBrep, i, this.CurrentPt, this.LastPt,
+                    this.currentDoc);
+                if (isPtOnSrf)
+                {
+                    List<Point3d> ptList = new List<Point3d>(){this.LastPt, this.CurrentPt};
+                    Curve octopusArmCustom = this.currentBrep.Faces[i].
+                        InterpolatedCurveOnSurface(ptList, this.currentDoc.ModelAbsoluteTolerance);
+                    
+                    this.OctopusCustom = new KeyValuePair<Curve, int>(octopusArmCustom, i);
+                    break;
+                }
+            }
+        }
 
-        public void OnMouseMoveTemplateBundle()
+        public void OnMouseMoveBundle()
         {
             this.CurrentFaceFinder();
             this.DrawFaceGenerator();
@@ -539,33 +589,35 @@ namespace MultiCut
             this.WPLCrvGenerator();
             this.OctopusCascader();
         }
-
-        public void OctopusCustomGenerator()
+        
+        private void OctopusArmCollector(KeyValuePair<Curve, int> pair)
         {
-            foreach (int i in CurrentFaceFoundIndexList)
+            List<Curve> targetCrvList = this.OctopusArmStocker.
+                                        Where(element => pair.Value == element.Key).
+                                        Select(element => element.Value).FirstOrDefault();
+
+            bool isCrvExist = false;
+            if (targetCrvList != null && targetCrvList.Count != 0)
             {
-                bool isPtOnSrf = MethodBasic.OnLoopFilter(this.currentBrep, i, this.CurrentPt, this.LastPt,
-                                 this.currentDoc);
-                if (isPtOnSrf)
+                foreach (Curve crv in targetCrvList)
                 {
-                    List<Point3d> ptList = new List<Point3d>(){this.LastPt, this.CurrentPt};
-                    Curve octopusArmCustom = this.currentBrep.Faces[i].
-                                             InterpolatedCurveOnSurface(ptList, this.currentDoc.ModelAbsoluteTolerance);
-                    
-                    this.OctopusCustom = new KeyValuePair<Curve, int>(octopusArmCustom, i);
-                    break;
+                    isCrvExist |= GeometryBase.GeometryEquals(crv, pair.Key);
                 }
             }
-            
+            if (isCrvExist == false)
+            {
+                if (targetCrvList != null)
+                {
+                    targetCrvList.Add(pair.Key);
+                    this.OctopusArmStocker[pair.Value] = targetCrvList;
+                }
+            }
         }
+
         
-        public void OctopusArmCollector(KeyValuePair<Curve, int> pair)
-        {
-            
-        }
+
 
         #endregion
-
     }
 
     internal class GetPointTemplate : GetPoint
@@ -586,7 +638,7 @@ namespace MultiCut
             
             if (isPtOnEdge > 0)
             {
-                coreObj.OnMouseMoveTemplateBundle();
+                coreObj.OnMouseMoveBundle();
             }
             
             base.OnMouseMove(e);
@@ -605,7 +657,7 @@ namespace MultiCut
                 }
             }
             
-            foreach (BrepFace bFace in coreObj.DrawFaceFoundList)
+            foreach (BrepFace bFace in coreObj.FaceFoundDrawList)
             {
                 e.Display.DrawBrepShaded(bFace.DuplicateFace(false),mtl);
             }
@@ -636,6 +688,8 @@ namespace MultiCut
         public GetFirstPoint(Core coreobjPassed) : base(coreobjPassed)
         {
             coreObj = coreobjPassed;
+            this.SetCommandPrompt("Pick the first point");
+
         }
     }
 
@@ -644,7 +698,7 @@ namespace MultiCut
         public GetNextPoint(Core coreobjPassed) : base(coreobjPassed)
         {
             coreObj = coreobjPassed;
-            coreObj.OctopusOverlapDispatcher();
+            coreObj.GetPtDispatchBundle();
 
             int isLastPtOnCrv = coreObj.LastEdgeFinder();
             if (isLastPtOnCrv > 0)
@@ -652,6 +706,10 @@ namespace MultiCut
                 coreObj.OctopusDrawBundle();
             }
             
+            this.SetCommandPrompt("Pick the next point, or press ENTER to finish cut");
+            this.AcceptNothing(true);
+
+
         }
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
@@ -677,6 +735,11 @@ namespace MultiCut
             if (coreObj.OctopusCustom.Key != null)
             {
                 e.Display.DrawCurve(coreObj.OctopusCustom.Key, System.Drawing.Color.Blue, 3);
+            }
+            
+            foreach (Curve crv in coreObj.OctopusStockedDrawList)
+            {
+                e.Display.DrawCurve(crv, System.Drawing.Color.Orchid, 3);
             }
 
             base.OnDynamicDraw(e);
