@@ -276,11 +276,11 @@ namespace MultiCut
         private void IsPtOnLoopDispatcher()
         {
             foreach (bool isPtOnSrf in 
-                     CurrentFaceFoundIndexList.Select
-                     (i => MethodBasic.OnLoopFilter
-                         (this.currentBrep, i, this.CurrentPt, this.LastPt, this.currentDoc)
+                     this.CurrentFaceFoundIndexList.Select
+                        (faceIndex => MethodBasic.OnLoopFilter
+                            (this.currentBrep, faceIndex, this.CurrentPt, this.LastPt, this.currentDoc)
+                        )
                      )
-                    )
             {
                 this.OnLoopList.Add(isPtOnSrf);
                 break;
@@ -659,7 +659,7 @@ namespace MultiCut
             
             foreach (BrepFace bFace in coreObj.FaceFoundDrawList)
             {
-                e.Display.DrawBrepShaded(bFace.DuplicateFace(false),mtl);
+                //e.Display.DrawBrepShaded(bFace.DuplicateFace(false),mtl);
             }
 
 
@@ -689,6 +689,7 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
             this.SetCommandPrompt("Pick the first point");
+            
 
         }
     }
@@ -707,8 +708,7 @@ namespace MultiCut
             }
             
             this.SetCommandPrompt("Pick the next point, or press ENTER to finish cut");
-            this.AcceptNothing(true);
-
+            this.AcceptEnterWhenDone(true);
 
         }
 
@@ -739,7 +739,7 @@ namespace MultiCut
             
             foreach (Curve crv in coreObj.OctopusStockedDrawList)
             {
-                e.Display.DrawCurve(crv, System.Drawing.Color.Orchid, 3);
+                e.Display.DrawCurve(crv, System.Drawing.Color.CornflowerBlue, 3);
             }
 
             base.OnDynamicDraw(e);
