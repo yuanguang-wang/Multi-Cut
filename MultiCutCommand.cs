@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Rhino;
+﻿using Rhino;
 
 namespace MultiCut
 {
@@ -20,6 +19,10 @@ namespace MultiCut
         protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
         {
             Core core = new Core(doc);
+            if (core.CollectionResult == false)
+            {
+                return Rhino.Commands.Result.Cancel;
+            }
             
             GetFirstPoint getFirstPoint = new GetFirstPoint(core);
             getFirstPoint.Get();
@@ -44,13 +47,13 @@ namespace MultiCut
                 getNextPoint.Get();
                 if (getNextPoint.CommandResult() != Rhino.Commands.Result.Success)
                 {
-                    return getNextPoint.CommandResult();
+                    break;
                 }
                 core.LastPtCandidate = getNextPoint.Point();
 
             }
             
-            core.CutbyOctopus();
+            core.CutOperation();
             
             doc.Views.Redraw();
             return Rhino.Commands.Result.Success;
