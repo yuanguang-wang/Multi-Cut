@@ -50,6 +50,7 @@ namespace MultiCut
 
             }
             
+            core.CutbyOctopus();
             
             doc.Views.Redraw();
             return Rhino.Commands.Result.Success;

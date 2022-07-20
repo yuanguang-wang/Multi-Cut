@@ -3,6 +3,7 @@ using System.Linq;
 
 using Rhino;
 using Rhino.Geometry;
+using Rhino.Geometry.Collections;
 using Rhino.Input.Custom;
 
 using Eto.Forms;
@@ -179,6 +180,7 @@ namespace MultiCut
         public List<Curve> OctopusStockedDrawList { get; }
         public KeyValuePair<Curve, int> OctopusCustom { get; private set; }
         public List<bool> OnLoopList { get; }
+        public Brep BrepSliced { get; set; }
 
         #endregion
 
@@ -318,7 +320,7 @@ namespace MultiCut
             LastFaceFoundIndexList = MethodBasic.FaceFinder(this.LastEdgeFoundList);
         }
 
-        private void DrawFaceGenerator()
+        private void FaceDrawGenerator()
         {
             this.FaceFoundDrawList = new List<BrepFace>();
             List<int> drawFaceFoundIndexList = this.LastFaceFoundIndexList == null 
@@ -575,7 +577,7 @@ namespace MultiCut
         public void OnMouseMoveBundle()
         {
             this.CurrentFaceFinder();
-            this.DrawFaceGenerator();
+            this.FaceDrawGenerator();
             this.ProphetGenerator();
 
         }
@@ -614,7 +616,44 @@ namespace MultiCut
             }
         }
 
-        
+        public void CutbyOctopus()
+        {
+            List<Curve> cutterCrvs = new List<Curve>();
+            foreach (int faceIndex in this.OctopusArmStocker.Keys)
+            {
+                cutterCrvs.AddRange(this.OctopusArmStocker[faceIndex]);
+            }
+            
+            List<Brep> bFaceList = new List<Brep>();
+            Brep[] newBrep = this.currentBrep.Split(cutterCrvs, this.currentDoc.ModelAbsoluteTolerance);
+            if (newBrep.Length == 0)
+            {
+                RhinoApp.WriteLine("failed");
+            }
+            foreach (Brep brep in newBrep)
+            {
+                this.currentDoc.Objects.AddBrep(brep);
+            }
+            
+
+            /*foreach (int faceIndex in this.OctopusArmStocker.Keys)
+            {
+                bFaceList.add
+                List<Curve> cutterCrv = this.OctopusArmStocker[faceIndex];
+                if (cutterCrv.Count > 0)
+                {
+                    bFaceCollection[faceIndex].Split(cutterCrv, this.currentDoc.ModelAbsoluteTolerance);
+                }
+            }*/
+        }
+
+        public void BrepReplace()
+        {
+            
+        }
+
+
+
 
 
         #endregion
