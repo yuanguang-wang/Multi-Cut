@@ -184,9 +184,9 @@ namespace MultiCut
         #endregion
         #region CTOR
         
-        public Core(RhinoDoc doc)
+        public Core(RhinoDoc currentDoc)
         {
-            this.currentDoc = doc;
+            this.currentDoc = currentDoc;
             this.CollectionResult = MethodBasic.ObjectCollecter(out this.baseBrep, out this.baseBrepRef);
 
             this.OctopusArmStocker = new List<Curve>();
@@ -590,10 +590,22 @@ namespace MultiCut
         
         private void CutByCrvList(IEnumerable<Curve> crvCollection)
         {
-            Brep[] newBrepArray = this.baseBrep.Split(crvCollection, this.currentDoc.ModelAbsoluteTolerance);
+            List<Curve> crvList = crvCollection.ToList();
+            if (crvList.Count == 0)
+            {
+                RhinoApp.WriteLine("Cut curves collection is empty");
+                return;
+            }
+            
+            Brep[] newBrepArray = this.baseBrep.Split(crvList, this.currentDoc.ModelAbsoluteTolerance);
+            
             if (newBrepArray.Length == 0)
             {
-                RhinoApp.WriteLine("No curves are drawn");
+                RhinoApp.WriteLine("Brep cannot be cut");
+                foreach (Curve crv in crvList)
+                {
+                    this.currentDoc.Objects.AddCurve(crv);
+                }
             }
             else if (newBrepArray.Length == 1)
             {
@@ -601,22 +613,49 @@ namespace MultiCut
             }
             else
             {
-                foreach (Curve crv in this.OctopusArmStocker)
+                Brep[] tryJoinBrepArray = Brep.JoinBreps(newBrepArray,this.currentDoc.ModelAbsoluteTolerance);
+                if (tryJoinBrepArray.Length == 0)
                 {
-                    this.currentDoc.Objects.AddCurve(crv);
-                    RhinoApp.WriteLine("Cut operation failed");
+                    RhinoApp.WriteLine("Try join brep failed");
                 }
+                else if (tryJoinBrepArray.Length == 1)
+                {
+                    this.currentDoc.Objects.Replace(this.baseBrepRef, tryJoinBrepArray[0]);
+                }
+                else
+                {
+                    RhinoApp.WriteLine("More than one brep is generated");
+                    foreach (Brep brep in tryJoinBrepArray)
+                    {
+                        this.currentDoc.Objects.Add(brep);
+                    }
+                }
+                
             }
         }
         
         private void CutByProphet()
         {
-            this.CutByCrvList(this.ProphetCrvs);
+            if (this.ProphetCrvs != null)
+            {
+                this.CutByCrvList(this.ProphetCrvs);
+            }
+            else
+            {
+                RhinoApp.WriteLine("Prophet curve collection is empty");
+            }
         }
         
         private void CutByOctopus()
         {
-            this.CutByCrvList(this.OctopusArmStocker);
+            if (this.OctopusArmStocker != null)
+            {
+                this.CutByCrvList(this.OctopusArmStocker);
+            }
+            else
+            {
+                RhinoApp.WriteLine("Octopus curve collection is empty");
+            }
         }
 
         public void CutOperation()
@@ -696,8 +735,6 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
             this.SetCommandPrompt("Pick the first point");
-            
-
         }
     }
 
@@ -739,7 +776,7 @@ namespace MultiCut
                 this.AddConstructionPoint(element.Key.PointAtEnd);
             }
 
-            if (coreObj.OctopusCustom == null)
+            if (coreObj.OctopusCustom != null)
             {
                 e.Display.DrawCurve(coreObj.OctopusCustom, System.Drawing.Color.Blue, 3);
             }

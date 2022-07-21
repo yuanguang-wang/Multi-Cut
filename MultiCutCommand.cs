@@ -28,11 +28,12 @@ namespace MultiCut
             getFirstPoint.Get();
             if (getFirstPoint.CommandResult() != Rhino.Commands.Result.Success)
             {
-                return getFirstPoint.CommandResult();
+                core.CutOperation();
+                doc.Views.Redraw();
+                return Rhino.Commands.Result.Success;;
             }
-            core.LastPtCandidate = getFirstPoint.Point();
             
-
+            core.LastPtCandidate = getFirstPoint.Point();
             while (true)
             {
                 int ptCollectedCount = core.OnLoopList.Count;
@@ -52,7 +53,6 @@ namespace MultiCut
                 core.LastPtCandidate = getNextPoint.Point();
 
             }
-            
             core.CutOperation();
             
             doc.Views.Redraw();
