@@ -681,6 +681,7 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
             this.PermitElevatorMode(0);
+            this.AcceptNothing(true);
         }
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
@@ -734,7 +735,8 @@ namespace MultiCut
         public GetFirstPoint(Core coreobjPassed) : base(coreobjPassed)
         {
             coreObj = coreobjPassed;
-            this.SetCommandPrompt("Pick the first point");
+            this.SetCommandPrompt("Pick the first point, or press ENTER to finish cut");
+            
         }
     }
 
@@ -752,7 +754,6 @@ namespace MultiCut
             }
             
             this.SetCommandPrompt("Pick the next point, or press ENTER to finish cut");
-            this.AcceptEnterWhenDone(true);
 
         }
 

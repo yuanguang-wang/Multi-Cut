@@ -1,4 +1,5 @@
 ﻿using Rhino;
+using Rhino.Input;
 
 namespace MultiCut
 {
@@ -25,12 +26,20 @@ namespace MultiCut
             }
             
             GetFirstPoint getFirstPoint = new GetFirstPoint(core);
-            getFirstPoint.Get();
-            if (getFirstPoint.CommandResult() != Rhino.Commands.Result.Success)
+            GetResult rsFpt = getFirstPoint.Get();
+            if (rsFpt != GetResult.Point) // !Mouse Down
             {
-                core.CutOperation();
-                doc.Views.Redraw();
-                return Rhino.Commands.Result.Success;;
+                if (rsFpt == GetResult.Nothing) // Press Enter
+                {
+                    core.CutOperation();
+                    doc.Views.Redraw();
+                    return Rhino.Commands.Result.Success;
+                } 
+                else // Press ESC
+                {
+                    RhinoApp.WriteLine("Command Exit");
+                    return Rhino.Commands.Result.Cancel;
+                }
             }
             
             core.LastPtCandidate = getFirstPoint.Point();
@@ -44,11 +53,20 @@ namespace MultiCut
                         break;
                     }
                 }
+                
                 GetNextPoint getNextPoint = new GetNextPoint(core);
-                getNextPoint.Get();
-                if (getNextPoint.CommandResult() != Rhino.Commands.Result.Success)
+                GetResult rsNpt = getNextPoint.Get();
+                if (rsNpt != GetResult.Point) // !Mouse Down
                 {
-                    break;
+                    if (rsNpt == GetResult.Nothing) // Press Enter
+                    {
+                        break;
+                    } 
+                    else // Press ESC
+                    {
+                        RhinoApp.WriteLine("Command Exit");
+                        return Rhino.Commands.Result.Cancel;
+                    }
                 }
                 core.LastPtCandidate = getNextPoint.Point();
 
