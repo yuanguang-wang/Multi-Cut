@@ -31,6 +31,7 @@ namespace MultiCut
             getObject.Get();
             if (getObject.CommandResult() != Rhino.Commands.Result.Success)
             {
+                RhinoApp.WriteLine("Command EXIT");
                 return false;
             }
             brepRef2BPassed = getObject.Object(0);
@@ -158,6 +159,7 @@ namespace MultiCut
         private readonly RhinoDoc currentDoc;
         private readonly Brep baseBrep;
         private readonly ObjRef baseBrepRef;
+        private readonly MultiCutPreference mcp = MultiCutPreference.Instance;
 
         #endregion
         #region ATTR
@@ -613,24 +615,34 @@ namespace MultiCut
             }
             else
             {
-                Brep[] tryJoinBrepArray = Brep.JoinBreps(newBrepArray,this.currentDoc.ModelAbsoluteTolerance);
-                if (tryJoinBrepArray.Length == 0)
+                if (mcp.IsBrepSplitted)
                 {
-                    RhinoApp.WriteLine("Try join brep failed");
-                }
-                else if (tryJoinBrepArray.Length == 1)
-                {
-                    this.currentDoc.Objects.Replace(this.baseBrepRef, tryJoinBrepArray[0]);
-                }
-                else
-                {
-                    RhinoApp.WriteLine("More than one brep is generated");
-                    foreach (Brep brep in tryJoinBrepArray)
+                    RhinoApp.WriteLine("Brep is splitted");
+                    foreach (Brep brep in newBrepArray)
                     {
                         this.currentDoc.Objects.Add(brep);
                     }
                 }
-                
+                else
+                {
+                    Brep[] tryJoinBrepArray = Brep.JoinBreps(newBrepArray,this.currentDoc.ModelAbsoluteTolerance);
+                    if (tryJoinBrepArray.Length == 0)
+                    {
+                        RhinoApp.WriteLine("Try join brep failed");
+                    }
+                    else if (tryJoinBrepArray.Length == 1)
+                    {
+                        this.currentDoc.Objects.Replace(this.baseBrepRef, tryJoinBrepArray[0]);
+                    }
+                    else
+                    {
+                        RhinoApp.WriteLine("More than one brep is generated");
+                        foreach (Brep brep in tryJoinBrepArray)
+                        {
+                            this.currentDoc.Objects.Add(brep);
+                        }
+                    }
+                }
             }
         }
         

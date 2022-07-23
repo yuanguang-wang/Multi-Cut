@@ -38,7 +38,7 @@ namespace MultiCut
                 } 
                 else // Press ESC
                 {
-                    RhinoApp.WriteLine("Command Exit");
+                    RhinoApp.WriteLine("Command EXIT");
                     return Result.Cancel;
                 }
             }
@@ -65,7 +65,7 @@ namespace MultiCut
                     } 
                     else // Press ESC
                     {
-                        RhinoApp.WriteLine("Command Exit");
+                        RhinoApp.WriteLine("Command EXIT");
                         return Result.Cancel;
                     }
                 }
@@ -79,16 +79,16 @@ namespace MultiCut
         }
     }
 
-    public class MultiCutPreferenceCommand : Command
+    public class PreferenceCommand : Command
     {
         #region ATTR
-        public MultiCutPreferenceCommand()
+        public PreferenceCommand()
         {
             Instance = this;
         }
         // ReSharper disable once MemberCanBePrivate.Global
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
-        public static MultiCutPreferenceCommand Instance { get; private set; }
+        public static PreferenceCommand Instance { get; private set; }
         public override string EnglishName => "mcp";
         
         #endregion
@@ -96,9 +96,11 @@ namespace MultiCut
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             MultiCutPreference mcpObj = MultiCutPreference.Instance;
-            mcpObj.IsBrepSplitted = true;
+            PreferenceForm formObj = new PreferenceForm();
             
-            RhinoApp.WriteLine("mcp run!");
+            formObj.Show();
+            
+            mcpObj.IsBrepSplitted = true;
             
             return Result.Success;
         }
