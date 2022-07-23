@@ -151,7 +151,7 @@ namespace MultiCut
 
     }
 
-    internal class Core
+    public class Core
     { 
         #region FIELD
 

@@ -1,9 +1,10 @@
 ﻿using Rhino;
+using Rhino.Commands;
 using Rhino.Input;
 
 namespace MultiCut
 {
-    public class MultiCutCommand : Rhino.Commands.Command
+    public class MultiCutCommand : Command
     {
         #region ATTR
         public MultiCutCommand()
@@ -17,44 +18,44 @@ namespace MultiCut
         
         #endregion
 
-        protected override Rhino.Commands.Result RunCommand(RhinoDoc doc, Rhino.Commands.RunMode mode)
+        protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            Core core = new Core(doc);
-            if (core.CollectionResult == false)
+            Core coreObj = new Core(doc);
+            if (coreObj.CollectionResult == false)
             {
-                return Rhino.Commands.Result.Cancel;
+                return Result.Cancel;
             }
             
-            GetFirstPoint getFirstPoint = new GetFirstPoint(core);
+            GetFirstPoint getFirstPoint = new GetFirstPoint(coreObj);
             GetResult rsFpt = getFirstPoint.Get();
             if (rsFpt != GetResult.Point) // !Mouse Down
             {
                 if (rsFpt == GetResult.Nothing) // Press Enter
                 {
-                    core.CutOperation();
+                    coreObj.CutOperation();
                     doc.Views.Redraw();
-                    return Rhino.Commands.Result.Success;
+                    return Result.Success;
                 } 
                 else // Press ESC
                 {
                     RhinoApp.WriteLine("Command Exit");
-                    return Rhino.Commands.Result.Cancel;
+                    return Result.Cancel;
                 }
             }
             
-            core.LastPtCandidate = getFirstPoint.Point();
+            coreObj.LastPtCandidate = getFirstPoint.Point();
             while (true)
             {
-                int ptCollectedCount = core.OnLoopList.Count;
+                int ptCollectedCount = coreObj.OnLoopList.Count;
                 if (ptCollectedCount >= 2)
                 {
-                    if (core.OnLoopList.Contains(false))
+                    if (coreObj.OnLoopList.Contains(false))
                     {
                         break;
                     }
                 }
                 
-                GetNextPoint getNextPoint = new GetNextPoint(core);
+                GetNextPoint getNextPoint = new GetNextPoint(coreObj);
                 GetResult rsNpt = getNextPoint.Get();
                 if (rsNpt != GetResult.Point) // !Mouse Down
                 {
@@ -65,16 +66,41 @@ namespace MultiCut
                     else // Press ESC
                     {
                         RhinoApp.WriteLine("Command Exit");
-                        return Rhino.Commands.Result.Cancel;
+                        return Result.Cancel;
                     }
                 }
-                core.LastPtCandidate = getNextPoint.Point();
+                coreObj.LastPtCandidate = getNextPoint.Point();
 
             }
-            core.CutOperation();
+            coreObj.CutOperation();
             
             doc.Views.Redraw();
-            return Rhino.Commands.Result.Success;
+            return Result.Success;
+        }
+    }
+
+    public class MultiCutPreferenceCommand : Command
+    {
+        #region ATTR
+        public MultiCutPreferenceCommand()
+        {
+            Instance = this;
+        }
+        // ReSharper disable once MemberCanBePrivate.Global
+        // ReSharper disable once UnusedAutoPropertyAccessor.Global
+        public static MultiCutPreferenceCommand Instance { get; private set; }
+        public override string EnglishName => "mcp";
+        
+        #endregion
+
+        protected override Result RunCommand(RhinoDoc doc, RunMode mode)
+        {
+            MultiCutPreference mcpObj = MultiCutPreference.Instance;
+            mcpObj.IsBrepSplitted = true;
+            
+            RhinoApp.WriteLine("mcp run!");
+            
+            return Result.Success;
         }
     }
 }
