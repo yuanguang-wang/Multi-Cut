@@ -12,7 +12,7 @@ namespace MultiCut
         #region ATTR
         
         public bool IsBrepSplitted { get; set; }
-        
+
 
         #endregion
         #region CTOR
@@ -37,6 +37,7 @@ namespace MultiCut
 
     public class PreferenceForm : Form
     {
+        private MultiCutPreference Mcp => MultiCutPreference.Instance;
         private IEnumerable<object> SplitOptBoolList => new object[] { true, false };
         private Label SplitOptLabel => new Label(){Text = "Split if possible:"};
         private RadioButtonList SplitOptRBList { get; set; }
@@ -76,8 +77,29 @@ namespace MultiCut
                 Spacing = new Size(5,5)
             
             };
-            
-            //this.SplitOptRBList.Load += (sender, args) => 
+            this.SplitOptRBList.Load += (sender, args) =>
+            {
+                if (Mcp.IsBrepSplitted)
+                {
+                    this.SplitOptRBList.SelectedIndex = 0;
+                }
+                else if (!Mcp.IsBrepSplitted)
+                {
+                    this.SplitOptRBList.SelectedIndex = 1;
+                }
+                
+            };
+            this.SplitOptRBList.SelectedIndexChanged += (sender, args) =>
+                {
+                    if (this.SplitOptRBList.SelectedIndex == 0)
+                    {
+                        Mcp.IsBrepSplitted = true;
+                    }
+                    else if (this.SplitOptRBList.SelectedIndex == 1)
+                    {
+                        Mcp.IsBrepSplitted = false;
+                    }
+                };
         }
 
         protected override void OnClosed(EventArgs e)

@@ -617,7 +617,7 @@ namespace MultiCut
             {
                 if (mcp.IsBrepSplitted)
                 {
-                    RhinoApp.WriteLine("Brep is splitted");
+                    RhinoApp.WriteLine("Brep splitted");
                     foreach (Brep brep in newBrepArray)
                     {
                         this.currentDoc.Objects.Add(brep);

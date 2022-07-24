@@ -100,8 +100,6 @@ namespace MultiCut
             
             formObj.Show();
             
-            mcpObj.IsBrepSplitted = true;
-            
             return Result.Success;
         }
     }
