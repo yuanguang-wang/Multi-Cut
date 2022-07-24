@@ -37,7 +37,8 @@ namespace MultiCut
 
     public class PreferenceForm : Form
     {
-        private MultiCutPreference Mcp => MultiCutPreference.Instance;
+        private MultiCutPreference McPreference => MultiCutPreference.Instance;
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         private IEnumerable<object> SplitOptBoolList => new object[] { true, false };
         private Label SplitOptLabel => new Label(){Text = "Split if possible:"};
         private RadioButtonList SplitOptRBList { get; set; }
@@ -79,27 +80,38 @@ namespace MultiCut
             };
             this.SplitOptRBList.Load += (sender, args) =>
             {
-                if (Mcp.IsBrepSplitted)
+                // Read
+                bool isBrepSplitted = McPlugin.Settings.GetBool("SplitOption");
+                if (isBrepSplitted)
                 {
                     this.SplitOptRBList.SelectedIndex = 0;
                 }
-                else if (!Mcp.IsBrepSplitted)
+                else if (!isBrepSplitted)
                 {
                     this.SplitOptRBList.SelectedIndex = 1;
                 }
                 
             };
             this.SplitOptRBList.SelectedIndexChanged += (sender, args) =>
+            {
+                // Write
+                if (this.SplitOptRBList.SelectedIndex == 0)
                 {
-                    if (this.SplitOptRBList.SelectedIndex == 0)
-                    {
-                        Mcp.IsBrepSplitted = true;
-                    }
-                    else if (this.SplitOptRBList.SelectedIndex == 1)
-                    {
-                        Mcp.IsBrepSplitted = false;
-                    }
-                };
+                    McPlugin.Settings.SetBool("SplitOption", true);
+                }
+                else if (this.SplitOptRBList.SelectedIndex == 1)
+                {
+                    McPlugin.Settings.SetBool("SplitOption", false);
+                }
+                McPlugin.SaveSettings();
+                McPreference.IsBrepSplitted = McPlugin.Settings.GetBool("SplitOption");
+            };
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            this.Location = new Point(Mouse.Position);
+            base.OnLoad(e);
         }
 
         protected override void OnClosed(EventArgs e)

@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-
+using Eto.Drawing;
 using Rhino;
 using Rhino.Geometry;
 using Rhino.Input.Custom;
@@ -159,7 +159,8 @@ namespace MultiCut
         private readonly RhinoDoc currentDoc;
         private readonly Brep baseBrep;
         private readonly ObjRef baseBrepRef;
-        private readonly MultiCutPreference mcp = MultiCutPreference.Instance;
+        //private readonly MultiCutPreference mcp = MultiCutPreference.Instance;
+        private readonly MultiCutPlugin mcPlugin = MultiCutPlugin.Instance;
 
         #endregion
         #region ATTR
@@ -251,6 +252,7 @@ namespace MultiCut
                 else
                 {
                     RhinoApp.WriteLine("Overlapping detected, pick one curve to continue.");
+                    dispatchDialog.Load += (sender, args) => dispatchDialog.Location = new Eto.Drawing.Point(Mouse.Position);
                     int indexSelcted = dispatchDialog.ShowModal(RhinoEtoApp.MainWindow);
 
                     Curve targetCrv = keyList[indexSelcted - 1];
@@ -615,7 +617,8 @@ namespace MultiCut
             }
             else
             {
-                if (mcp.IsBrepSplitted)
+                bool isBrepSplitted = this.mcPlugin.Settings.GetBool("SplitOption");
+                if (isBrepSplitted)
                 {
                     RhinoApp.WriteLine("Brep splitted");
                     foreach (Brep brep in newBrepArray)

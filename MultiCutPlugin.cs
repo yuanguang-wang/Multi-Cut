@@ -1,4 +1,6 @@
-﻿using Rhino;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Rhino;
 using Rhino.PlugIns;
 
 namespace MultiCut
@@ -18,6 +20,7 @@ namespace MultiCut
         public MultiCutPlugin()
         {
             Instance = this;
+
         }
 
         #endregion
@@ -25,8 +28,24 @@ namespace MultiCut
 
         protected override LoadReturnCode OnLoad(ref string errorMessage)
         {
+            PersistentSettings settingCollection = GetPluginSettings(this.Id, true);
+            bool isSettingExist = settingCollection.TryGetBool("SplitOption", out bool value);
+            if (!isSettingExist)
+            {
+                this.Settings.SetBool("SplitOption", false);
+            }
+            else
+            {
+                this.Settings.SetBool("SplitOption", value);
+            }
             RhinoApp.WriteLine("Loaded");
             return base.OnLoad(ref errorMessage);
+        }
+
+        protected override void OnShutdown()
+        {
+            SavePluginSettings(this.Id);
+            base.OnShutdown();
         }
 
         #endregion
