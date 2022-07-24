@@ -104,7 +104,6 @@ namespace MultiCut
                     McPlugin.Settings.SetBool("SplitOption", false);
                 }
                 McPlugin.SaveSettings();
-                McPreference.IsBrepSplitted = McPlugin.Settings.GetBool("SplitOption");
             };
         }
 
@@ -120,4 +119,13 @@ namespace MultiCut
             this.Dispose();
         }
     }
+
+    public class BrepSplitOption : RadioButtonList
+    {
+        private IEnumerable<object> SplitOptBoolList => new object[] { "Yes", "No" };
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+
+
+    }
+    
 }
