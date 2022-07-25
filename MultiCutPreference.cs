@@ -39,6 +39,7 @@ namespace MultiCut
     {
         private MultiCutPreference McPreference => MultiCutPreference.Instance;
         private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        private GeneralBox General => GeneralBox.Instance;
         private IEnumerable<object> SplitOptBoolList => new object[] { true, false };
         private Label SplitOptLabel => new Label(){Text = "Split if possible:"};
         private RadioButtonList SplitOptRBList { get; set; }
@@ -54,7 +55,6 @@ namespace MultiCut
             this.Minimizable = false;
             this.ShowInTaskbar = false;
             
-            this.SetSplitRBList();
             this.SetLayout();
             this.Content = PreferenceLayout;
 
@@ -65,47 +65,10 @@ namespace MultiCut
             this.PreferenceLayout = new DynamicLayout();
 
             this.PreferenceLayout.Spacing = new Size(10,10);
-            this.PreferenceLayout.AddRow(this.SplitOptLabel, this.SplitOptRBList);
+            this.PreferenceLayout.AddRow(this.General);
             
         }
-
-        private void SetSplitRBList()
-        {
-            this.SplitOptRBList = new RadioButtonList()
-            {
-                Orientation = Orientation.Horizontal,
-                DataStore = SplitOptBoolList,
-                Spacing = new Size(5,5)
-            
-            };
-            this.SplitOptRBList.Load += (sender, args) =>
-            {
-                // Read
-                bool isBrepSplitted = McPlugin.Settings.GetBool("SplitOption");
-                if (isBrepSplitted)
-                {
-                    this.SplitOptRBList.SelectedIndex = 0;
-                }
-                else if (!isBrepSplitted)
-                {
-                    this.SplitOptRBList.SelectedIndex = 1;
-                }
-                
-            };
-            this.SplitOptRBList.SelectedIndexChanged += (sender, args) =>
-            {
-                // Write
-                if (this.SplitOptRBList.SelectedIndex == 0)
-                {
-                    McPlugin.Settings.SetBool("SplitOption", true);
-                }
-                else if (this.SplitOptRBList.SelectedIndex == 1)
-                {
-                    McPlugin.Settings.SetBool("SplitOption", false);
-                }
-                McPlugin.SaveSettings();
-            };
-        }
+        
 
         protected override void OnLoad(EventArgs e)
         {
@@ -120,12 +83,55 @@ namespace MultiCut
         }
     }
 
-    public class BrepSplitOption : RadioButtonList
+    public class GeneralBox : GroupBox, IGroupCommon
     {
-        private IEnumerable<object> SplitOptBoolList => new object[] { "Yes", "No" };
-        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        public DynamicLayout GroupLayout { get; set; }
+        public static GeneralBox Instance { get; } = new GeneralBox();
+        private CheckBox SplitCheck { get; set; }
 
+        private GeneralBox()
+        {
+            this.Text = "General";
+            this.Padding = new Padding(10);
+            
+            this.SetSplitCheck();
+            this.SetLayout();
+
+            this.Content = this.GroupLayout;
+
+        }
+
+        private void SetSplitCheck()
+        {
+            this.SplitCheck = new CheckBox(){Text = "Split Is Possible", ThreeState = false};
+            this.SplitCheck.Load += (sender, args) =>
+            {
+                bool isSplitted = this.McPlugin.Settings.GetBool("SplitCheck");
+                this.SplitCheck.Checked = isSplitted;
+            };
+            this.SplitCheck.CheckedChanged += (sender, args) =>
+            {
+                // ReSharper disable once PossibleInvalidOperationException
+                bool isChecked = (bool)this.SplitCheck.Checked;
+                this.McPlugin.Settings.SetBool("SplitCheck", isChecked);
+                this.McPlugin.SaveSettings();
+            };
+        }
+
+        public void SetLayout()
+        {
+            this.GroupLayout = new DynamicLayout();
+            this.GroupLayout.AddRow(this.SplitCheck);
+        }
 
     }
-    
+
+    public interface IGroupCommon
+    {
+        MultiCutPlugin McPlugin { get; }
+        DynamicLayout GroupLayout { get; set; }
+        void SetLayout();
+    }
+
 }

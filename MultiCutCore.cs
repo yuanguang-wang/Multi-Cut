@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Eto.Drawing;
+
 using Rhino;
 using Rhino.Geometry;
 using Rhino.Input.Custom;
@@ -160,7 +160,7 @@ namespace MultiCut
         private readonly Brep baseBrep;
         private readonly ObjRef baseBrepRef;
         //private readonly MultiCutPreference mcp = MultiCutPreference.Instance;
-        private readonly MultiCutPlugin mcPlugin = MultiCutPlugin.Instance;
+        private readonly MultiCutPlugin mctPlugin = MultiCutPlugin.Instance;
 
         #endregion
         #region ATTR
@@ -617,7 +617,7 @@ namespace MultiCut
             }
             else
             {
-                bool isBrepSplitted = this.mcPlugin.Settings.GetBool("SplitOption");
+                bool isBrepSplitted = this.mctPlugin.Settings.GetBool("SplitCheck");
                 if (isBrepSplitted)
                 {
                     RhinoApp.WriteLine("Brep splitted");

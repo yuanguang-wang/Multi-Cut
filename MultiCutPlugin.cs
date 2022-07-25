@@ -30,14 +30,14 @@ namespace MultiCut
         {
             PersistentSettings settingCollection = GetPluginSettings(this.Id, true);
             
-            bool isSettingExist = settingCollection.TryGetBool("SplitOption", out bool value);
+            bool isSettingExist = settingCollection.TryGetBool("SplitCheck", out bool value);
             if (!isSettingExist)
             {
-                this.Settings.SetBool("SplitOption", false);
+                this.Settings.SetBool("SplitCheck", false);
             }
             else
             {
-                this.Settings.SetBool("SplitOption", value);
+                this.Settings.SetBool("SplitCheck", value);
             }
 
             ICollection<string> keyCollection = settingCollection.Keys;
