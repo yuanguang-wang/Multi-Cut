@@ -74,7 +74,7 @@ namespace MultiCut
 
         private void SetSplitCheck()
         {
-            this.SplitCheck = new CheckBox(){Text = "Split If Possible", ThreeState = false};
+            this.SplitCheck = new CheckBox(){Text = "Split if possible", ThreeState = false};
             this.SplitCheck.Load += (sender, args) =>
             {
                 bool isSplitted = this.McPlugin.Settings.GetBool("SplitCheck");
@@ -106,7 +106,8 @@ namespace MultiCut
         private PredictionLineBox()
         {
             this.Text = "Prediction Line";
-            
+
+            this.SetEnableCheck();
             this.SetPriorityCheck();
             this.SetColorCheck();
             this.SetColorPick();
@@ -117,12 +118,37 @@ namespace MultiCut
             this.Content = this.GroupLayout;
         }
 
+        #region Enable
+
+        private CheckBox EnableCheck { get; set; }
+        private void SetEnableCheck()
+        {
+            this.EnableCheck = new CheckBox(){Text = "Enable", ThreeState = false };
+            this.EnableCheck.Load += OnEnableCheck;
+            this.EnableCheck.CheckedChanged += OnEnableCheck;
+        }
+        private void OnEnableCheck(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isAllChecked = (bool)this.EnableCheck.Checked;
+            this.PriorityCheck.Enabled = isAllChecked;
+            this.ColorCheck.Enabled = isAllChecked;
+            this.WidthCheck.Enabled = isAllChecked;
+            
+            this.OnColorChecked(sender, e);
+            this.OnWidthChecked(sender, e);
+            
+
+
+        }
+
+        #endregion
         #region Priority
 
         private CheckBox PriorityCheck { get; set; }
         private void SetPriorityCheck()
         {
-            this.PriorityCheck = new CheckBox(){Text = "Prioritize"};
+            this.PriorityCheck = new CheckBox(){Text = "Prioritize", ThreeState = false };
         }
 
         #endregion
@@ -131,22 +157,23 @@ namespace MultiCut
         private CheckBox ColorCheck { get; set; }
         private void SetColorCheck()
         {
-            this.ColorCheck = new CheckBox(){Text = "Customize color", ThreeState = false};
+            this.ColorCheck = new CheckBox(){Text = "Customize color", ThreeState = false };
             this.ColorCheck.Load += OnColorChecked;
             this.ColorCheck.CheckedChanged += OnColorChecked;
         }
-
         private void OnColorChecked(object sender, EventArgs e)
         {
             // ReSharper disable once PossibleInvalidOperationException
-            bool isChecked = (bool)this.ColorCheck.Checked;
-            this.ColorPick.Enabled = isChecked;
+            bool isSubChecked = (bool)this.ColorCheck.Checked;
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isAllChecked = (bool)this.EnableCheck.Checked;
+            this.ColorPick.Enabled = isSubChecked & isAllChecked;
         }
 
         private ColorPicker ColorPick { get; set; }
         private void SetColorPick()
         {
-            this.ColorPick = new ColorPicker() { Value = Colors.LimeGreen};
+            this.ColorPick = new ColorPicker() { Value = Colors.LimeGreen };
         }
 
         #endregion
@@ -155,16 +182,27 @@ namespace MultiCut
         private CheckBox WidthCheck { get; set; }
         private void SetWidthCheck()
         {
-            this.WidthCheck = new CheckBox() { Text = "Customize Linewidth", ThreeState = false};
+            this.WidthCheck = new CheckBox() { Text = "Customize Linewidth", ThreeState = false };
             this.WidthCheck.Load += OnWidthChecked;
             this.WidthCheck.CheckedChanged += OnWidthChecked;
         }
-
         private void OnWidthChecked(object sender, EventArgs e)
         {
             // ReSharper disable once PossibleInvalidOperationException
-            bool isChecked = (bool)this.WidthCheck.Checked;
-            this.WidthSlide.Enabled = isChecked;
+            bool isSubChecked = (bool)this.WidthCheck.Checked;
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isAllChecked = (bool)this.EnableCheck.Checked;
+            this.WidthSlide.Enabled = isSubChecked & isAllChecked;
+            if (isSubChecked & isAllChecked)
+            {
+                this.SlideNumber.TextColor = Colors.Black;
+            }
+            else
+            {
+                this.SlideNumber.TextColor = Colors.LightGrey;
+            }
+            
+
         }
 
         private Slider WidthSlide { get; set; }
@@ -172,13 +210,14 @@ namespace MultiCut
         {
             this.WidthSlide = new Slider()
             {
-                MaxValue = 10,
+                MaxValue = 9,
                 MinValue = 1,
                 Value = 3,
                 TickFrequency = 1,
                 SnapToTick = true
             };
         }
+        private Label SlideNumber => new Label() { Text = " 1   2   3   4   5   6   7   8   9"};
 
         #endregion
         
@@ -189,11 +228,13 @@ namespace MultiCut
             this.GroupLayout = new DynamicLayout();
             IEnumerable<Control> predictionControls = new Control[]
             {
+                this.EnableCheck,
                 this.PriorityCheck,
                 this.ColorCheck,
                 this.ColorPick,
                 this.WidthCheck,
-                this.WidthSlide
+                this.WidthSlide,
+                this.SlideNumber
             };
             this.GroupLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
         }
