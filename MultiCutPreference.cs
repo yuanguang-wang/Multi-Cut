@@ -7,53 +7,21 @@ using Rhino.UI;
 
 namespace MultiCut
 {
-    public class MultiCutPreference
-    {
-        #region ATTR
-        
-        public bool IsBrepSplitted { get; set; }
-
-
-        #endregion
-        #region CTOR
-
-        public static MultiCutPreference Instance { get; } = new MultiCutPreference();
-
-        private MultiCutPreference()
-        {
-            this.IsBrepSplitted = false;
-        }
-
-        #endregion
-        #region MTHD
-        
-        
-
-        
-
-        #endregion
-
-    }
-
     public class PreferenceForm : Form
     {
-        private MultiCutPreference McPreference => MultiCutPreference.Instance;
-        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         private GeneralBox General => GeneralBox.Instance;
-        private IEnumerable<object> SplitOptBoolList => new object[] { true, false };
-        private Label SplitOptLabel => new Label(){Text = "Split if possible:"};
-        private RadioButtonList SplitOptRBList { get; set; }
+        private PredictionLineBox PredictionLine => PredictionLineBox.Instance;
         private DynamicLayout PreferenceLayout { get; set; }
 
 
         public PreferenceForm()
         {
-            this.Padding = new Padding(10);
             this.Owner = RhinoEtoApp.MainWindow;
             this.Title = "Multi-Cut Preference";
             this.Maximizable = false;
             this.Minimizable = false;
             this.ShowInTaskbar = false;
+            this.Resizable = false;
             
             this.SetLayout();
             this.Content = PreferenceLayout;
@@ -65,8 +33,10 @@ namespace MultiCut
             this.PreferenceLayout = new DynamicLayout();
 
             this.PreferenceLayout.Spacing = new Size(10,10);
-            this.PreferenceLayout.AddRow(this.General);
-            
+            //this.PreferenceLayout.AddColumn(this.General, this.PredictionLine);
+            IEnumerable<GroupBox> controls = new GroupBox[] { this.General, this.PredictionLine };
+            this.PreferenceLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
+
         }
         
 
@@ -104,7 +74,7 @@ namespace MultiCut
 
         private void SetSplitCheck()
         {
-            this.SplitCheck = new CheckBox(){Text = "Split Is Possible", ThreeState = false};
+            this.SplitCheck = new CheckBox(){Text = "Split If Possible", ThreeState = false};
             this.SplitCheck.Load += (sender, args) =>
             {
                 bool isSplitted = this.McPlugin.Settings.GetBool("SplitCheck");
@@ -125,6 +95,108 @@ namespace MultiCut
             this.GroupLayout.AddRow(this.SplitCheck);
         }
 
+    }
+
+    public class PredictionLineBox : GroupBox, IGroupCommon
+    {
+        public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        public DynamicLayout GroupLayout { get; set; }
+        public static PredictionLineBox Instance { get; } = new PredictionLineBox();
+
+        private PredictionLineBox()
+        {
+            this.Text = "Prediction Line";
+            
+            this.SetPriorityCheck();
+            this.SetColorCheck();
+            this.SetColorPick();
+            this.SetWidthCheck();
+            this.SetWidthSlide();
+            this.SetLayout();
+
+            this.Content = this.GroupLayout;
+        }
+
+        #region Priority
+
+        private CheckBox PriorityCheck { get; set; }
+        private void SetPriorityCheck()
+        {
+            this.PriorityCheck = new CheckBox(){Text = "Prioritize"};
+        }
+
+        #endregion
+        #region Color
+
+        private CheckBox ColorCheck { get; set; }
+        private void SetColorCheck()
+        {
+            this.ColorCheck = new CheckBox(){Text = "Customize color", ThreeState = false};
+            this.ColorCheck.Load += OnColorChecked;
+            this.ColorCheck.CheckedChanged += OnColorChecked;
+        }
+
+        private void OnColorChecked(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isChecked = (bool)this.ColorCheck.Checked;
+            this.ColorPick.Enabled = isChecked;
+        }
+
+        private ColorPicker ColorPick { get; set; }
+        private void SetColorPick()
+        {
+            this.ColorPick = new ColorPicker() { Value = Colors.LimeGreen};
+        }
+
+        #endregion
+        #region LineWidth
+
+        private CheckBox WidthCheck { get; set; }
+        private void SetWidthCheck()
+        {
+            this.WidthCheck = new CheckBox() { Text = "Customize Linewidth", ThreeState = false};
+            this.WidthCheck.Load += OnWidthChecked;
+            this.WidthCheck.CheckedChanged += OnWidthChecked;
+        }
+
+        private void OnWidthChecked(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isChecked = (bool)this.WidthCheck.Checked;
+            this.WidthSlide.Enabled = isChecked;
+        }
+
+        private Slider WidthSlide { get; set; }
+        private void SetWidthSlide()
+        {
+            this.WidthSlide = new Slider()
+            {
+                MaxValue = 10,
+                MinValue = 1,
+                Value = 3,
+                TickFrequency = 1,
+                SnapToTick = true
+            };
+        }
+
+        #endregion
+        
+        
+
+        public void SetLayout()
+        {
+            this.GroupLayout = new DynamicLayout();
+            IEnumerable<Control> predictionControls = new Control[]
+            {
+                this.PriorityCheck,
+                this.ColorCheck,
+                this.ColorPick,
+                this.WidthCheck,
+                this.WidthSlide
+            };
+            this.GroupLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
+        }
     }
 
     public interface IGroupCommon

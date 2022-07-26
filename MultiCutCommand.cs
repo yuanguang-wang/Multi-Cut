@@ -95,7 +95,6 @@ namespace MultiCut
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            MultiCutPreference mcpObj = MultiCutPreference.Instance;
             PreferenceForm formObj = new PreferenceForm();
             
             formObj.Show();
