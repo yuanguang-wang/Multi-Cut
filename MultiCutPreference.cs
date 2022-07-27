@@ -33,7 +33,6 @@ namespace MultiCut
             this.PreferenceLayout = new DynamicLayout();
 
             this.PreferenceLayout.Spacing = new Size(10,10);
-            //this.PreferenceLayout.AddColumn(this.General, this.PredictionLine);
             IEnumerable<GroupBox> controls = new GroupBox[] { this.General, this.PredictionLine };
             this.PreferenceLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
 
@@ -138,8 +137,6 @@ namespace MultiCut
             this.OnColorChecked(sender, e);
             this.OnWidthChecked(sender, e);
             
-
-
         }
 
         #endregion
@@ -193,16 +190,19 @@ namespace MultiCut
             // ReSharper disable once PossibleInvalidOperationException
             bool isAllChecked = (bool)this.EnableCheck.Checked;
             this.WidthSlide.Enabled = isSubChecked & isAllChecked;
+            this.SlideNumber.Visible = isSubChecked & isAllChecked;
             if (isSubChecked & isAllChecked)
             {
-                this.SlideNumber.TextColor = Colors.Black;
+                Rhino.RhinoApp.WriteLine("enabled");
+                this.SlideNumber.TextColor = Eto.Drawing.Color.FromArgb(0, 0, 0, 255);
             }
             else
             {
-                this.SlideNumber.TextColor = Colors.LightGrey;
+                Rhino.RhinoApp.WriteLine("disabled");
+                Eto.Drawing.Color grey = Eto.Drawing.Color.FromArgb(128, 128, 128, 255);
+                this.SlideNumber.TextColor = grey;
             }
             
-
         }
 
         private Slider WidthSlide { get; set; }
