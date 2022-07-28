@@ -150,6 +150,11 @@ namespace MultiCut
             return faceIndexList;
         }
 
+        public static bool DoubleCheck(bool? upperCheck, bool? localCheck)
+        {
+            return (bool)upperCheck && (bool)localCheck;
+        }
+
     }
 
     public class Core
@@ -165,6 +170,7 @@ namespace MultiCut
         #endregion
         #region ATTR
 
+        private MultiCutPreference McPref => MultiCutPreference.Instance;
         public bool CollectionResult { get; }
         public Curve[] ProphetCrvs { get; private set; }
         private Plane ProphetPlane { get; set; }
@@ -576,7 +582,11 @@ namespace MultiCut
         public void OnMouseMoveBundle()
         {
             this.CurrentFaceFinder();
-            this.ProphetGenerator();
+            if (this.McPref.IsProphetEnabled)
+            {
+                this.ProphetGenerator();
+            }
+            
         }
 
         public void OctopusDrawBundle()
@@ -657,7 +667,7 @@ namespace MultiCut
             }
             else
             {
-                RhinoApp.WriteLine("Prophet curve collection is empty");
+                RhinoApp.WriteLine("Prediction line is not enabled");
             }
         }
         
@@ -675,8 +685,7 @@ namespace MultiCut
 
         public void CutOperation()
         {
-            int cutRunTime = this.OnLoopList.Count;
-            if (cutRunTime <= 3)
+            if (McPref.IsPriorityEnabled)
             {
                 this.CutByProphet();
             }

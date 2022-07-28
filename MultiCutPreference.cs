@@ -7,6 +7,23 @@ using Rhino.UI;
 
 namespace MultiCut
 {
+    public class MultiCutPreference 
+    {
+        #region ATTR
+
+        public bool IsProphetEnabled { get; set; }
+        public bool IsPriorityEnabled { get; set; }
+
+
+        #endregion
+        #region CTOR
+
+        public static MultiCutPreference Instance { get; } = new MultiCutPreference();
+        private MultiCutPreference() { }
+
+        #endregion
+    }
+
     public class PreferenceForm : Form
     {
         private GeneralBox General => GeneralBox.Instance;
@@ -54,6 +71,7 @@ namespace MultiCut
 
     public class GeneralBox : GroupBox, IGroupCommon
     {
+        public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupLayout { get; set; }
         public static GeneralBox Instance { get; } = new GeneralBox();
@@ -98,6 +116,7 @@ namespace MultiCut
 
     public class PredictionLineBox : GroupBox, IGroupCommon
     {
+        public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupLayout { get; set; }
         public static PredictionLineBox Instance { get; } = new PredictionLineBox();
@@ -134,6 +153,8 @@ namespace MultiCut
             this.ColorCheck.Enabled = isAllChecked;
             this.WidthCheck.Enabled = isAllChecked;
             
+            this.McPref.IsProphetEnabled = isAllChecked;
+            
             this.OnColorChecked(sender, e);
             this.OnWidthChecked(sender, e);
             
@@ -146,6 +167,15 @@ namespace MultiCut
         private void SetPriorityCheck()
         {
             this.PriorityCheck = new CheckBox(){Text = "Prioritize", ThreeState = false };
+            this.PriorityCheck.Load += this.OnPriorityChecked;
+            this.PriorityCheck.CheckedChanged += this.OnPriorityChecked;
+        }
+
+        private void OnPriorityChecked(object sender, EventArgs e)
+        {
+            bool doubleCheck = MethodBasic.DoubleCheck(this.EnableCheck.Checked, 
+                                                       this.PriorityCheck.Checked);
+            McPref.IsPriorityEnabled = doubleCheck;
         }
 
         #endregion
@@ -165,6 +195,15 @@ namespace MultiCut
             // ReSharper disable once PossibleInvalidOperationException
             bool isAllChecked = (bool)this.EnableCheck.Checked;
             this.ColorPick.Enabled = isSubChecked & isAllChecked;
+            if(isSubChecked & isAllChecked)
+            {
+                this.ColorPick.Value = Colors.LimeGreen;
+            }
+            else
+            {
+                this.ColorPick.Value = Colors.LightSlateGray;
+            }
+            
         }
 
         private ColorPicker ColorPick { get; set; }
@@ -242,6 +281,7 @@ namespace MultiCut
 
     public interface IGroupCommon
     {
+        MultiCutPreference McPref { get; }
         MultiCutPlugin McPlugin { get; }
         DynamicLayout GroupLayout { get; set; }
         void SetLayout();
