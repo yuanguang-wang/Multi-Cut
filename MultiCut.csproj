@@ -11,6 +11,12 @@
   <ItemGroup>
     <EmbeddedResource Include="EmbeddedResources\**\*" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="bin\**" />
+    <EmbeddedResource Remove="bin\**" />
+    <None Remove="bin\**" />
+  </ItemGroup>
   
   <ItemGroup>
     <PackageReference Include="RhinoCommon" Version="7.18.22124.3001" IncludeAssets="compile;build" />
@@ -25,21 +31,9 @@
   </ItemGroup>
   
   <ItemGroup>
+    <None Remove=".DS_Store" />
     <None Remove="System.Drawing" />
     <None Remove="System" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Content Include="bin\.DS_Store" />
-    <Content Include="bin\Debug\.DS_Store" />
-    <Content Include="bin\Debug\net48\MultiCut.pdb" />
-    <Content Include="bin\Debug\net48\MultiCut.rhp" />
-    <Content Include="bin\Debug\net48\MultiSlicer.pdb" />
-    <Content Include="bin\Debug\net48\MultiSlicer.rhp" />
-    <Content Include="bin\Release\net48\MultiCut.pdb" />
-    <Content Include="bin\Release\net48\MultiCut.rhp" />
-    <Content Include="bin\Release\net48\MultiSlicer.pdb" />
-    <Content Include="bin\Release\net48\MultiSlicer.rhp" />
   </ItemGroup>
   <PropertyGroup Condition="$(Configuration) == 'Debug' AND $([MSBuild]::IsOSPlatform(Windows))">
     <StartProgram>C:\Program Files\Rhino 7\System\Rhino.exe</StartProgram>

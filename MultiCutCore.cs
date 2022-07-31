@@ -164,13 +164,12 @@ namespace MultiCut
         private readonly RhinoDoc currentDoc;
         private readonly Brep baseBrep;
         private readonly ObjRef baseBrepRef;
-        //private readonly MultiCutPreference mcp = MultiCutPreference.Instance;
-        private readonly MultiCutPlugin mctPlugin = MultiCutPlugin.Instance;
+        private readonly MultiCutPreference McPref = MultiCutPreference.Instance;
+        private readonly MultiCutPlugin McPlug = MultiCutPlugin.Instance;
 
         #endregion
         #region ATTR
 
-        private MultiCutPreference McPref => MultiCutPreference.Instance;
         public bool CollectionResult { get; }
         public Curve[] ProphetCrvs { get; private set; }
         private Plane ProphetPlane { get; set; }
@@ -275,6 +274,7 @@ namespace MultiCut
         
         private void IsPtOnLoopDispatcher()
         {
+            // decide to stop the new gp generarion when press enter (3 pt above).
             foreach (bool isPtOnSrf in 
                      this.CurrentFaceFoundIndexList.Select
                         (faceIndex => MethodBasic.OnLoopFilter
@@ -627,7 +627,7 @@ namespace MultiCut
             }
             else
             {
-                bool isBrepSplitted = this.mctPlugin.Settings.GetBool("SplitCheck");
+                bool isBrepSplitted = this.McPlug.Settings.GetBool("SplitCheck");
                 if (isBrepSplitted)
                 {
                     RhinoApp.WriteLine("Brep splitted");
