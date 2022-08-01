@@ -233,12 +233,12 @@ namespace MultiCut
             if (isSubChecked & isAllChecked)
             {
                 Rhino.RhinoApp.WriteLine("enabled");
-                this.SlideNumber.TextColor = Eto.Drawing.Color.FromArgb(0, 0, 0, 255);
+                this.SlideNumber.TextColor = Color.FromArgb(0, 0, 0);
             }
             else
             {
                 Rhino.RhinoApp.WriteLine("disabled");
-                Eto.Drawing.Color grey = Eto.Drawing.Color.FromArgb(128, 128, 128, 255);
+                Color grey = Color.FromArgb(128, 128, 128);
                 this.SlideNumber.TextColor = grey;
             }
             
@@ -256,7 +256,7 @@ namespace MultiCut
                 SnapToTick = true
             };
         }
-        private Label SlideNumber => new Label() { Text = " 1   2   3   4   5   6   7   8   9"};
+        private Label SlideNumber => new Label() { Text = " 1   2   3   4   5   6   7   8   9 "};
 
         #endregion
         

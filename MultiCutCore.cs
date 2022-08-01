@@ -152,7 +152,11 @@ namespace MultiCut
 
         public static bool DoubleCheck(bool? upperCheck, bool? localCheck)
         {
-            return (bool)upperCheck && (bool)localCheck;
+            // ReSharper disable once PossibleInvalidOperationException
+            bool upperCast = (bool)upperCheck;
+            // ReSharper disable once PossibleInvalidOperationException
+            bool localCast = (bool)localCheck;
+            return upperCast && localCast;
         }
 
     }
@@ -175,7 +179,6 @@ namespace MultiCut
         private Plane ProphetPlane { get; set; }
         public Point3d CurrentPt { get; set; }
         private Point3d LastPt { get; set; }
-        public Point3d LastPtCandidate { get; set; }
         private List<BrepEdge> CurrentEdgeFoundList { get; set; }
         private List<BrepEdge> LastEdgeFoundList { get; set; }
         private List<int> CurrentFaceFoundIndexList { get; set; }
@@ -210,7 +213,7 @@ namespace MultiCut
         {
             if (this.OctopusPtStocker.Count == 0)
             {
-                this.OctopusPtStocker.Add(this.LastPtCandidate);
+                this.OctopusPtStocker.Add(this.CurrentPt);
             }
             else
             {
@@ -229,7 +232,7 @@ namespace MultiCut
 
                 foreach (KeyValuePair<Curve, string> element in this.OctopusCascade)
                 {
-                    double distance = this.LastPtCandidate.DistanceTo(element.Key.PointAtEnd);
+                    double distance = this.CurrentPt.DistanceTo(element.Key.PointAtEnd);
                     if (distance <= 100 * this.currentDoc.ModelAbsoluteTolerance)
                     {
                         textList.Add(element.Value);
@@ -251,7 +254,7 @@ namespace MultiCut
 
                 if (indexList.Count == 1)
                 {
-                    this.OctopusPtStocker.Add(this.LastPtCandidate);
+                    this.OctopusPtStocker.Add(this.CurrentPt);
                     this.OctopusArmCollector(this.OctopusCustom);
                 }
                 else
@@ -263,7 +266,7 @@ namespace MultiCut
                     Curve targetCrv = keyList[indexSelcted - 1];
                     
                     this.OctopusPtStocker.Add(indexSelcted == 0
-                        ? this.LastPtCandidate
+                        ? this.CurrentPt
                         : targetCrv.PointAtEnd);
                     this.OctopusArmCollector(targetCrv);
                 }
@@ -274,7 +277,7 @@ namespace MultiCut
         
         private void IsPtOnLoopDispatcher()
         {
-            // decide to stop the new gp generarion when press enter (3 pt above).
+            // decide to stop the new gp generation when press enter (3 pt above).
             foreach (bool isPtOnSrf in 
                      this.CurrentFaceFoundIndexList.Select
                         (faceIndex => MethodBasic.OnLoopFilter
@@ -287,11 +290,6 @@ namespace MultiCut
             }
         }
 
-        public void GetPtDispatchBundle()
-        {
-            this.OctopusOverlapDispatcher();
-            this.IsPtOnLoopDispatcher();
-        }
         
         #endregion
         #region FIND
@@ -308,7 +306,7 @@ namespace MultiCut
             CurrentFaceFoundIndexList = MethodBasic.FaceFinder(this.CurrentEdgeFoundList);
         }
 
-        public int LastEdgeFinder()
+        private int LastEdgeFinder()
         {
             this.LastEdgeFoundList = new List<BrepEdge>();
             LastEdgeFoundList = MethodBasic.EdgeFinder(this.LastPt, this.baseBrep, this.currentDoc);
@@ -472,6 +470,33 @@ namespace MultiCut
             }
         }
         
+        private void OctopusCustomGenerator()
+        {
+            foreach (int i in CurrentFaceFoundIndexList)
+            {
+                bool isPtOnSrf = MethodBasic.OnLoopFilter(this.baseBrep, i, this.CurrentPt, this.LastPt,
+                    this.currentDoc);
+                if (isPtOnSrf)
+                {
+                    List<Point3d> ptList = new List<Point3d>(){this.LastPt, this.CurrentPt};
+                    Curve octopusArmCustom = this.baseBrep.Faces[i].
+                        InterpolatedCurveOnSurface(ptList, this.currentDoc.ModelAbsoluteTolerance);
+                    
+                    this.OctopusCustom = octopusArmCustom;
+                    break;
+                }
+            }
+        }
+        
+        public void AssistPtGenerator()
+        {
+            if (this.CurrentEdgeFoundList.Count == 1)
+            {
+                this.CurrentEdgeFoundList[0].DivideByCount(9, true, out Point3d[] cptTemp);
+                this.AssistPtList = cptTemp;
+            }
+        }
+        
         #endregion
         #region COLLECT
 
@@ -532,25 +557,7 @@ namespace MultiCut
                 this.OctopusCascade.Add(octopusCrvList[index], octopusTypeStrList[index]);
             }
         }
-        
-        public void OctopusCustomGenerator()
-        {
-            foreach (int i in CurrentFaceFoundIndexList)
-            {
-                bool isPtOnSrf = MethodBasic.OnLoopFilter(this.baseBrep, i, this.CurrentPt, this.LastPt,
-                    this.currentDoc);
-                if (isPtOnSrf)
-                {
-                    List<Point3d> ptList = new List<Point3d>(){this.LastPt, this.CurrentPt};
-                    Curve octopusArmCustom = this.baseBrep.Faces[i].
-                        InterpolatedCurveOnSurface(ptList, this.currentDoc.ModelAbsoluteTolerance);
-                    
-                    this.OctopusCustom = octopusArmCustom;
-                    break;
-                }
-            }
-        }
-        
+
         private void OctopusArmCollector(Curve crvCandidate)
         {
             bool isCrvExist = false;
@@ -568,18 +575,9 @@ namespace MultiCut
         }
         
         #endregion
-        #region DRAW
+        #region BUNDLE
         
-        public void AssistPtGenerator()
-        {
-            if (this.CurrentEdgeFoundList.Count == 1)
-            {
-                this.CurrentEdgeFoundList[0].DivideByCount(9, true, out Point3d[] cptTemp);
-                this.AssistPtList = cptTemp;
-            }
-        }
-
-        public void OnMouseMoveBundle()
+        public void MouseMoveBaseBundle()
         {
             this.CurrentFaceFinder();
             if (this.McPref.IsProphetEnabled)
@@ -589,14 +587,31 @@ namespace MultiCut
             
         }
 
-        public void OctopusDrawBundle()
+        public void MouseMoveNextBundle()
         {
+            this.OctopusCustomGenerator();
+
+        }
+
+        public void CtorNextBundle()
+        {
+            int isLastPtOnCrv = this.LastEdgeFinder();
+            if (!(isLastPtOnCrv > 0))
+            {
+                return;
+            }
             this.LastFaceFinder();
             this.OctopusRawGenerator();
             this.ISOCrvGenerator();
             this.CPLCrvGenerator();
             this.WPLCrvGenerator();
             this.OctopusCascader();
+        }
+        
+        public void GetPtDispatchBundle()
+        {
+            this.OctopusOverlapDispatcher();
+            this.IsPtOnLoopDispatcher();
         }
         
         #endregion
@@ -710,14 +725,15 @@ namespace MultiCut
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
         {
-            coreObj.IsAssistKeyDown = e.ShiftKeyDown & e.ControlKeyDown;
+            coreObj.IsAssistKeyDown = true;
+            //coreObj.IsAssistKeyDown = e.ControlKeyDown;
             coreObj.CurrentPt = e.Point;
             
             int isPtOnEdge = coreObj.CurrentEdgeFinder();
             
             if (isPtOnEdge > 0)
             {
-                coreObj.OnMouseMoveBundle();
+                coreObj.MouseMoveBaseBundle();
             }
             
             base.OnMouseMove(e);
@@ -770,12 +786,7 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
             coreObj.GetPtDispatchBundle();
-
-            int isLastPtOnCrv = coreObj.LastEdgeFinder();
-            if (isLastPtOnCrv > 0)
-            {
-                coreObj.OctopusDrawBundle();
-            }
+            coreObj.CtorNextBundle();
             
             this.SetCommandPrompt("Pick the next point, or press ENTER to finish cut");
 
@@ -783,7 +794,8 @@ namespace MultiCut
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
         {
-            coreObj.OctopusCustomGenerator();
+            coreObj.MouseMoveNextBundle();
+            
             base.OnMouseMove(e);
         }
 

@@ -43,7 +43,6 @@ namespace MultiCut
                 }
             }
             
-            coreObj.LastPtCandidate = getFirstPoint.Point();
             while (true)
             {
                 int ptCollectedCount = coreObj.OnLoopList.Count;
@@ -56,10 +55,10 @@ namespace MultiCut
                 }
                 
                 GetNextPoint getNextPoint = new GetNextPoint(coreObj);
-                GetResult rsNpt = getNextPoint.Get();
-                if (rsNpt != GetResult.Point) // !Mouse Down
+                GetResult rsNextPt = getNextPoint.Get();
+                if (rsNextPt != GetResult.Point) // !Mouse Down
                 {
-                    if (rsNpt == GetResult.Nothing) // Press Enter
+                    if (rsNextPt == GetResult.Nothing) // Press Enter
                     {
                         break;
                     } 
@@ -69,9 +68,12 @@ namespace MultiCut
                         return Result.Cancel;
                     }
                 }
-                coreObj.LastPtCandidate = getNextPoint.Point();
 
             }
+
+            // not need to get but trigger ctor
+            GetNextPoint _ = new GetNextPoint(coreObj);
+
             coreObj.CutOperation();
             
             doc.Views.Redraw();
