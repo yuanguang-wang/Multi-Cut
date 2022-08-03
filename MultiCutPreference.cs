@@ -73,7 +73,7 @@ namespace MultiCut
     {
         public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
-        public DynamicLayout GroupLayout { get; set; }
+        public DynamicLayout GroupBoxLayout { get; set; }
         public static GeneralBox Instance { get; } = new GeneralBox();
         private CheckBox SplitCheck { get; set; }
 
@@ -85,7 +85,7 @@ namespace MultiCut
             this.SetSplitCheck();
             this.SetLayout();
 
-            this.Content = this.GroupLayout;
+            this.Content = this.GroupBoxLayout;
 
         }
 
@@ -108,8 +108,8 @@ namespace MultiCut
 
         public void SetLayout()
         {
-            this.GroupLayout = new DynamicLayout();
-            this.GroupLayout.AddRow(this.SplitCheck);
+            this.GroupBoxLayout = new DynamicLayout();
+            this.GroupBoxLayout.AddRow(this.SplitCheck);
         }
 
     }
@@ -118,7 +118,7 @@ namespace MultiCut
     {
         public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
-        public DynamicLayout GroupLayout { get; set; }
+        public DynamicLayout GroupBoxLayout { get; set; }
         public static PredictionLineBox Instance { get; } = new PredictionLineBox();
 
         private PredictionLineBox()
@@ -133,7 +133,7 @@ namespace MultiCut
             this.SetWidthSlide();
             this.SetLayout();
 
-            this.Content = this.GroupLayout;
+            this.Content = this.GroupBoxLayout;
         }
 
         #region Enable
@@ -142,18 +142,21 @@ namespace MultiCut
         private void SetEnableCheck()
         {
             this.EnableCheck = new CheckBox(){Text = "Enable", ThreeState = false };
-            this.EnableCheck.Load += OnEnableCheck;
-            this.EnableCheck.CheckedChanged += OnEnableCheck;
+            this.EnableCheck.Load += OnEnableChecked;
+            this.EnableCheck.CheckedChanged += OnEnableChecked;
         }
-        private void OnEnableCheck(object sender, EventArgs e)
+        private void OnEnableChecked(object sender, EventArgs e)
         {
             // ReSharper disable once PossibleInvalidOperationException
-            bool isAllChecked = (bool)this.EnableCheck.Checked;
-            this.PriorityCheck.Enabled = isAllChecked;
-            this.ColorCheck.Enabled = isAllChecked;
-            this.WidthCheck.Enabled = isAllChecked;
+            bool isEnableChecked = (bool)this.EnableCheck.Checked;
+            this.PriorityCheck.Enabled = isEnableChecked;
             
-            this.McPref.IsProphetEnabled = isAllChecked;
+            this.ColorCheck.Enabled = isEnableChecked;
+            //this.ColorCheck.EnabledChanged += (o, args) => 
+            
+            this.WidthCheck.Enabled = isEnableChecked;
+            
+            this.McPref.IsProphetEnabled = isEnableChecked;
             
             this.OnColorChecked(sender, e);
             this.OnWidthChecked(sender, e);
@@ -184,26 +187,14 @@ namespace MultiCut
         private CheckBox ColorCheck { get; set; }
         private void SetColorCheck()
         {
-            this.ColorCheck = new CheckBox(){Text = "Customize color", ThreeState = false };
+            this.ColorCheck = new CheckBox(){Text = "Customize Color", ThreeState = false };
             this.ColorCheck.Load += OnColorChecked;
             this.ColorCheck.CheckedChanged += OnColorChecked;
         }
         private void OnColorChecked(object sender, EventArgs e)
         {
-            // ReSharper disable once PossibleInvalidOperationException
-            bool isSubChecked = (bool)this.ColorCheck.Checked;
-            // ReSharper disable once PossibleInvalidOperationException
-            bool isAllChecked = (bool)this.EnableCheck.Checked;
-            this.ColorPick.Enabled = isSubChecked & isAllChecked;
-            if(isSubChecked & isAllChecked)
-            {
-                this.ColorPick.Value = Colors.LimeGreen;
-            }
-            else
-            {
-                this.ColorPick.Value = Colors.LightSlateGray;
-            }
-            
+            bool doubleCheck = MethodBasic.DoubleCheck(this.EnableCheck.Checked, this.ColorCheck.Checked);
+            this.ColorPick.Enabled = doubleCheck;
         }
 
         private ColorPicker ColorPick { get; set; }
@@ -229,19 +220,6 @@ namespace MultiCut
             // ReSharper disable once PossibleInvalidOperationException
             bool isAllChecked = (bool)this.EnableCheck.Checked;
             this.WidthSlide.Enabled = isSubChecked & isAllChecked;
-            this.SlideNumber.Visible = isSubChecked & isAllChecked;
-            if (isSubChecked & isAllChecked)
-            {
-                Rhino.RhinoApp.WriteLine("enabled");
-                this.SlideNumber.TextColor = Color.FromArgb(0, 0, 0);
-            }
-            else
-            {
-                Rhino.RhinoApp.WriteLine("disabled");
-                Color grey = Color.FromArgb(128, 128, 128);
-                this.SlideNumber.TextColor = grey;
-            }
-            
         }
 
         private Slider WidthSlide { get; set; }
@@ -256,15 +234,13 @@ namespace MultiCut
                 SnapToTick = true
             };
         }
-        private Label SlideNumber => new Label() { Text = " 1   2   3   4   5   6   7   8   9 "};
 
         #endregion
-        
-        
+        #region Layout
 
         public void SetLayout()
         {
-            this.GroupLayout = new DynamicLayout();
+            this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> predictionControls = new Control[]
             {
                 this.EnableCheck,
@@ -272,18 +248,19 @@ namespace MultiCut
                 this.ColorCheck,
                 this.ColorPick,
                 this.WidthCheck,
-                this.WidthSlide,
-                this.SlideNumber
+                this.WidthSlide
             };
-            this.GroupLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
+            this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
         }
+        
+        #endregion
     }
 
     public interface IGroupCommon
     {
         MultiCutPreference McPref { get; }
         MultiCutPlugin McPlugin { get; }
-        DynamicLayout GroupLayout { get; set; }
+        DynamicLayout GroupBoxLayout { get; set; }
         void SetLayout();
     }
 
