@@ -12,11 +12,7 @@ using Rhino.UI;
 
 namespace MultiCut
 {
-    internal class MethodAssembly
-    {
-        // delegate placeholder
-    }
-
+    
     internal static class MethodBasic
     {
         public static bool ObjectCollecter(out Brep brep2BPassed, out ObjRef brepRef2BPassed)
@@ -831,4 +827,7 @@ namespace MultiCut
     {
         _ISOU, _ISOV, _CPLX, _CPLY, _CPLZ, _WPLX, _WPLY, _WPLZ
     }
+    
+    public delegate bool TryGetSetting<T>(string keyword, out T TValue);
+
 }

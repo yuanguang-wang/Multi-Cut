@@ -152,8 +152,6 @@ namespace MultiCut
             this.PriorityCheck.Enabled = isEnableChecked;
             
             this.ColorCheck.Enabled = isEnableChecked;
-            //this.ColorCheck.EnabledChanged += (o, args) => 
-            
             this.WidthCheck.Enabled = isEnableChecked;
             
             this.McPref.IsProphetEnabled = isEnableChecked;
