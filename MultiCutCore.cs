@@ -638,8 +638,7 @@ namespace MultiCut
             }
             else
             {
-                bool isBrepSplitted = this.McPlug.Settings.GetBool("SplitCheck");
-                if (isBrepSplitted)
+                if (this.McPref.IsSplitEnabled)
                 {
                     RhinoApp.WriteLine("Brep splitted");
                     foreach (Brep brep in newBrepArray)
@@ -827,7 +826,9 @@ namespace MultiCut
     {
         _ISOU, _ISOV, _CPLX, _CPLY, _CPLZ, _WPLX, _WPLY, _WPLZ
     }
+
+
     
-    public delegate bool TryGetSetting<T>(string keyword, out T TValue);
+
 
 }

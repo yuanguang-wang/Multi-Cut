@@ -1,16 +1,27 @@
 using System;
 using System.Collections.Generic;
+
 using Eto.Drawing;
 using Eto.Forms;
+
 using Rhino.UI;
+using Rhino;
 
 
 namespace MultiCut
 {
+    internal static class SettingKey
+    {
+        public const string SplitCheck = "SplitCheck";
+        public const string PredictionLineEnabledCheck = "PredictionLineEnabledCheck";
+    }
+    
     public class MultiCutPreference 
     {
         #region ATTR
 
+        private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
+        public bool IsSplitEnabled { get; set; }
         public bool IsProphetEnabled { get; set; }
         public bool IsPriorityEnabled { get; set; }
 
@@ -21,6 +32,21 @@ namespace MultiCut
         public static MultiCutPreference Instance { get; } = new MultiCutPreference();
         private MultiCutPreference() { }
 
+        #endregion
+        #region MTHD
+        
+        private void LoadBoolSetting(string keyword, PersistentSettings plugInSettingCollection, bool defaultValue)
+        {
+            bool isSettingExist = plugInSettingCollection.TryGetBool(keyword, out bool value);
+            this.PlugInSettings.SetBool(keyword, isSettingExist ? value : defaultValue);
+        }
+
+        public void LoadSettingBundle()
+        {
+            this.LoadBoolSetting(SettingKey.SplitCheck, PlugInSettings, false);
+            this.LoadBoolSetting(SettingKey.PredictionLineEnabledCheck, PlugInSettings, true);
+        }
+        
         #endregion
     }
 
@@ -94,14 +120,16 @@ namespace MultiCut
             this.SplitCheck = new CheckBox(){Text = "Split if possible", ThreeState = false};
             this.SplitCheck.Load += (sender, args) =>
             {
-                bool isSplitted = this.McPlugin.Settings.GetBool("SplitCheck");
+                bool isSplitted = this.McPlugin.Settings.GetBool(SettingKey.SplitCheck);
                 this.SplitCheck.Checked = isSplitted;
+                this.McPref.IsSplitEnabled = isSplitted;
             };
             this.SplitCheck.CheckedChanged += (sender, args) =>
             {
                 // ReSharper disable once PossibleInvalidOperationException
                 bool isChecked = (bool)this.SplitCheck.Checked;
-                this.McPlugin.Settings.SetBool("SplitCheck", isChecked);
+                this.McPref.IsSplitEnabled = isChecked;
+                this.McPlugin.Settings.SetBool(SettingKey.SplitCheck, isChecked);
                 this.McPlugin.SaveSettings();
             };
         }
@@ -141,33 +169,53 @@ namespace MultiCut
         private CheckBox EnableCheck { get; set; }
         private void SetEnableCheck()
         {
-            this.EnableCheck = new CheckBox(){Text = "Enable", ThreeState = false };
-            this.EnableCheck.Load += OnEnableChecked;
-            this.EnableCheck.CheckedChanged += OnEnableChecked;
+            this.EnableCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
+            this.EnableCheck.Load += OnEnableCheckLoad;
+            this.EnableCheck.CheckedChanged += OnEnableCheckChanged;
         }
-        private void OnEnableChecked(object sender, EventArgs e)
+        private void OnEnableCheckLoad(object sender, EventArgs e)
         {
-            // ReSharper disable once PossibleInvalidOperationException
-            bool isEnableChecked = (bool)this.EnableCheck.Checked;
-            this.PriorityCheck.Enabled = isEnableChecked;
+            // get DB //
+            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLineEnabledCheck);
+            // set CheckBox //
+            this.EnableCheck.Checked = isChecked;
+            // set mcp ATTR //
+            this.SetMcpAttr(isChecked);
+            // distribute sub setting //
+            this.EnableSubSetting(isChecked);
+
+        }
+        private void OnEnableCheckChanged(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException //
+            bool isChecked = (bool)this.EnableCheck.Checked;
+            // set DB //
+            this.McPlugin.Settings.SetBool(SettingKey.PredictionLineEnabledCheck, isChecked);
+            //set mcp ATTR //
+            this.SetMcpAttr(isChecked);
+            // distribute sub setting //
+            this.EnableSubSetting(isChecked);
             
-            this.ColorCheck.Enabled = isEnableChecked;
-            this.WidthCheck.Enabled = isEnableChecked;
-            
-            this.McPref.IsProphetEnabled = isEnableChecked;
-            
-            this.OnColorChecked(sender, e);
-            this.OnWidthChecked(sender, e);
-            
+        }
+        private void SetMcpAttr(bool isChecked)
+        {
+            this.McPref.IsProphetEnabled = isChecked;
         }
 
+        private void EnableSubSetting(bool isChecked)
+        {
+            this.PriorityCheck.Enabled = isChecked;
+            this.ColorCheck.Enabled = isChecked;
+            this.WidthCheck.Enabled = isChecked;
+        }
+        
         #endregion
         #region Priority
 
         private CheckBox PriorityCheck { get; set; }
         private void SetPriorityCheck()
         {
-            this.PriorityCheck = new CheckBox(){Text = "Prioritize", ThreeState = false };
+            this.PriorityCheck = new CheckBox(){ Text = "Prioritize", ThreeState = false };
             this.PriorityCheck.Load += this.OnPriorityChecked;
             this.PriorityCheck.CheckedChanged += this.OnPriorityChecked;
         }
@@ -213,11 +261,8 @@ namespace MultiCut
         }
         private void OnWidthChecked(object sender, EventArgs e)
         {
-            // ReSharper disable once PossibleInvalidOperationException
-            bool isSubChecked = (bool)this.WidthCheck.Checked;
-            // ReSharper disable once PossibleInvalidOperationException
-            bool isAllChecked = (bool)this.EnableCheck.Checked;
-            this.WidthSlide.Enabled = isSubChecked & isAllChecked;
+            bool doubleCheck = MethodBasic.DoubleCheck(this.EnableCheck.Checked, this.WidthCheck.Checked);
+            this.WidthSlide.Enabled = doubleCheck;
         }
 
         private Slider WidthSlide { get; set; }
