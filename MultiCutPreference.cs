@@ -7,13 +7,15 @@ using Eto.Forms;
 using Rhino.UI;
 using Rhino;
 
-
 namespace MultiCut
 {
     internal static class SettingKey
     {
-        public const string SplitCheck = "SplitCheck";
-        public const string PredictionLineEnabledCheck = "PredictionLineEnabledCheck";
+        public const string General_SplitCheck = "GeneralSplitCheck";
+        public const string PredictionLine_EnabledCheck = "PredictionLineEnabledCheck";
+        public const string PredictionLine_PriorityCheck = "PredictionLinePriorityCheck";
+        public const string PredictionLine_ColorCheck = "PredictionLineColorCheck";
+        public const string PredictionLine_ColorPick = "PredictionLineColorPick";
     }
     
     public class MultiCutPreference 
@@ -21,9 +23,9 @@ namespace MultiCut
         #region ATTR
 
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
-        public bool IsSplitEnabled { get; set; }
-        public bool IsProphetEnabled { get; set; }
-        public bool IsPriorityEnabled { get; set; }
+        public bool IsSplitChecked { get; set; }
+        public bool IsProphetChecked { get; set; }
+        public bool IsPriorityChecked { get; set; }
 
 
         #endregion
@@ -41,10 +43,20 @@ namespace MultiCut
             this.PlugInSettings.SetBool(keyword, isSettingExist ? value : defaultValue);
         }
 
+        private void LoadColorSetting(string keyword, PersistentSettings plugInSettingCollection, System.Drawing.Color defaultValue)
+        {
+            bool isSettingExist = plugInSettingCollection.TryGetColor(keyword, out System.Drawing.Color value);
+            this.PlugInSettings.SetColor(keyword, isSettingExist ? value : defaultValue);
+        }
+
         public void LoadSettingBundle()
         {
-            this.LoadBoolSetting(SettingKey.SplitCheck, PlugInSettings, false);
-            this.LoadBoolSetting(SettingKey.PredictionLineEnabledCheck, PlugInSettings, true);
+            this.LoadBoolSetting(SettingKey.General_SplitCheck, PlugInSettings, false);
+            this.LoadBoolSetting(SettingKey.PredictionLine_EnabledCheck, PlugInSettings, true);
+            this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
+            this.LoadBoolSetting(SettingKey.PredictionLine_ColorCheck, PlugInSettings, false);
+            this.LoadColorSetting(SettingKey.PredictionLine_ColorPick, PlugInSettings, Colors.LimeGreen.ToSystemDrawing());
+            
         }
         
         #endregion
@@ -120,16 +132,16 @@ namespace MultiCut
             this.SplitCheck = new CheckBox(){Text = "Split if possible", ThreeState = false};
             this.SplitCheck.Load += (sender, args) =>
             {
-                bool isSplitted = this.McPlugin.Settings.GetBool(SettingKey.SplitCheck);
+                bool isSplitted = this.McPlugin.Settings.GetBool(SettingKey.General_SplitCheck);
                 this.SplitCheck.Checked = isSplitted;
-                this.McPref.IsSplitEnabled = isSplitted;
+                this.McPref.IsSplitChecked = isSplitted;
             };
             this.SplitCheck.CheckedChanged += (sender, args) =>
             {
                 // ReSharper disable once PossibleInvalidOperationException
                 bool isChecked = (bool)this.SplitCheck.Checked;
-                this.McPref.IsSplitEnabled = isChecked;
-                this.McPlugin.Settings.SetBool(SettingKey.SplitCheck, isChecked);
+                this.McPref.IsSplitChecked = isChecked;
+                this.McPlugin.Settings.SetBool(SettingKey.General_SplitCheck, isChecked);
                 this.McPlugin.SaveSettings();
             };
         }
@@ -164,44 +176,43 @@ namespace MultiCut
             this.Content = this.GroupBoxLayout;
         }
 
-        #region Enable
+        #region EnableCheck
 
         private CheckBox EnableCheck { get; set; }
         private void SetEnableCheck()
         {
             this.EnableCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
             this.EnableCheck.Load += OnEnableCheckLoad;
+            this.EnableCheck.Load += OnColorPickEnabled;
             this.EnableCheck.CheckedChanged += OnEnableCheckChanged;
+            this.EnableCheck.CheckedChanged += OnColorPickEnabled;
         }
         private void OnEnableCheckLoad(object sender, EventArgs e)
         {
             // get DB //
-            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLineEnabledCheck);
+            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLine_EnabledCheck);
             // set CheckBox //
             this.EnableCheck.Checked = isChecked;
             // set mcp ATTR //
-            this.SetMcpAttr(isChecked);
+            this.SetMcPrefProphet(isChecked);
             // distribute sub setting //
             this.EnableSubSetting(isChecked);
-
         }
         private void OnEnableCheckChanged(object sender, EventArgs e)
         {
             // ReSharper disable once PossibleInvalidOperationException //
             bool isChecked = (bool)this.EnableCheck.Checked;
             // set DB //
-            this.McPlugin.Settings.SetBool(SettingKey.PredictionLineEnabledCheck, isChecked);
+            this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_EnabledCheck, isChecked);
             //set mcp ATTR //
-            this.SetMcpAttr(isChecked);
+            this.SetMcPrefProphet(isChecked);
             // distribute sub setting //
             this.EnableSubSetting(isChecked);
-            
         }
-        private void SetMcpAttr(bool isChecked)
+        private void SetMcPrefProphet(bool isChecked)
         {
-            this.McPref.IsProphetEnabled = isChecked;
+            this.McPref.IsProphetChecked = isChecked;
         }
-
         private void EnableSubSetting(bool isChecked)
         {
             this.PriorityCheck.Enabled = isChecked;
@@ -210,43 +221,78 @@ namespace MultiCut
         }
         
         #endregion
-        #region Priority
+        #region PriorityCheck
 
         private CheckBox PriorityCheck { get; set; }
         private void SetPriorityCheck()
         {
             this.PriorityCheck = new CheckBox(){ Text = "Prioritize", ThreeState = false };
-            this.PriorityCheck.Load += this.OnPriorityChecked;
-            this.PriorityCheck.CheckedChanged += this.OnPriorityChecked;
+            this.PriorityCheck.Load += this.OnPriorityCheckLoad;
+            this.PriorityCheck.CheckedChanged += this.OnPriorityCheckChanged;
         }
-
-        private void OnPriorityChecked(object sender, EventArgs e)
+        private void OnPriorityCheckLoad(object sender, EventArgs e)
         {
-            bool doubleCheck = MethodBasic.DoubleCheck(this.EnableCheck.Checked, 
-                                                       this.PriorityCheck.Checked);
-            McPref.IsPriorityEnabled = doubleCheck;
+            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLine_PriorityCheck);
+            this.PriorityCheck.Checked = isChecked;
+            this.SetMcPrefPriority(isChecked);
+        }
+        private void OnPriorityCheckChanged(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isChecked = (bool)this.PriorityCheck.Checked;
+            this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_PriorityCheck, isChecked);
+            this.SetMcPrefPriority(isChecked);
+        }
+        private void SetMcPrefPriority(bool isChecked)
+        {
+            this.McPref.IsPriorityChecked = isChecked;
         }
 
         #endregion
-        #region Color
+        #region ColorCheck
 
         private CheckBox ColorCheck { get; set; }
         private void SetColorCheck()
         {
             this.ColorCheck = new CheckBox(){Text = "Customize Color", ThreeState = false };
-            this.ColorCheck.Load += OnColorChecked;
-            this.ColorCheck.CheckedChanged += OnColorChecked;
+            this.ColorCheck.Load += OnColorCheckLoad;
+            this.ColorCheck.Load += OnColorPickEnabled;
+            this.ColorCheck.CheckedChanged += OnColorCheckChanged;
+            this.ColorCheck.CheckedChanged += OnColorPickEnabled;
         }
-        private void OnColorChecked(object sender, EventArgs e)
+        private void OnColorCheckLoad(object sender, EventArgs e)
         {
-            bool doubleCheck = MethodBasic.DoubleCheck(this.EnableCheck.Checked, this.ColorCheck.Checked);
+            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLine_ColorCheck);
+            this.ColorCheck.Checked = isChecked;
+            this.SetMcPrefColorCheck(isChecked);
+        }
+        private void OnColorCheckChanged(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isChecked = (bool)this.ColorCheck.Checked;
+            this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_ColorCheck, isChecked);
+            this.SetMcPrefColorCheck(isChecked);
+        }
+        private void SetMcPrefColorCheck(bool isChecked)
+        {
+            this.ColorCheck.Checked = isChecked;
+        }
+        private void OnColorPickEnabled(object sender, EventArgs e)
+        {
+            bool doubleCheck = MethodBasic.DoubleCheck(this.EnableCheck.Checked, 
+                                                        this.ColorCheck.Checked);
             this.ColorPick.Enabled = doubleCheck;
         }
 
+        #endregion
+        #region ColorPick
+        
         private ColorPicker ColorPick { get; set; }
         private void SetColorPick()
         {
             this.ColorPick = new ColorPicker() { Value = Colors.LimeGreen };
+            this.ColorPick.Load += null;
+            this.ColorPick.ValueChanged += null;
         }
 
         #endregion

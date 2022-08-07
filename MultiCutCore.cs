@@ -576,7 +576,7 @@ namespace MultiCut
         public void MouseMoveBaseBundle()
         {
             this.CurrentFaceFinder();
-            if (this.McPref.IsProphetEnabled)
+            if (this.McPref.IsProphetChecked)
             {
                 this.ProphetGenerator();
             }
@@ -638,7 +638,7 @@ namespace MultiCut
             }
             else
             {
-                if (this.McPref.IsSplitEnabled)
+                if (this.McPref.IsSplitChecked)
                 {
                     RhinoApp.WriteLine("Brep splitted");
                     foreach (Brep brep in newBrepArray)
@@ -695,7 +695,7 @@ namespace MultiCut
 
         public void CutOperation()
         {
-            if (McPref.IsPriorityEnabled)
+            if (McPref.IsPriorityChecked)
             {
                 this.CutByProphet();
             }

@@ -1,9 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Drawing;
-using Rhino;
-using Rhino.PlugIns;
+﻿ using Rhino.PlugIns;
 
 namespace MultiCut
 {
@@ -33,7 +28,6 @@ namespace MultiCut
             this.McPref.LoadSettingBundle();
             return base.OnLoad(ref errorMessage);
         }
-        
 
         #endregion
         
