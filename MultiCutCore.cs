@@ -165,7 +165,6 @@ namespace MultiCut
         private readonly Brep baseBrep;
         private readonly ObjRef baseBrepRef;
         private readonly MultiCutPreference McPref = MultiCutPreference.Instance;
-        private readonly MultiCutPlugin McPlug = MultiCutPlugin.Instance;
 
         #endregion
         #region ATTR
@@ -711,6 +710,7 @@ namespace MultiCut
     internal class GetPointTemplate : GetPoint
     {
         protected Core coreObj;
+        protected MultiCutPreference McPref => MultiCutPreference.Instance;
         protected GetPointTemplate(Core coreobjPassed)
         {
             coreObj = coreobjPassed;
@@ -741,7 +741,7 @@ namespace MultiCut
             {
                 foreach (Curve crv in coreObj.ProphetCrvs)
                 {
-                    e.Display.DrawCurve(crv, System.Drawing.Color.Chartreuse, 3);
+                    e.Display.DrawCurve(crv, this.McPref.ProphetColor, this.McPref.ProphetWidth);
                 }
             }
 

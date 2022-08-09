@@ -15,17 +15,22 @@ namespace MultiCut
         public const string PredictionLine_EnabledCheck = "PredictionLineEnabledCheck";
         public const string PredictionLine_PriorityCheck = "PredictionLinePriorityCheck";
         public const string PredictionLine_ColorCheck = "PredictionLineColorCheck";
-        public const string PredictionLine_ColorPick = "PredictionLineColorPick";
+        public const string PredictionLine_ColorCustom = "PredictionLineColorCustom";
+        public const string PredictionLine_WidthCheck = "PredictionLineWidthCheck";
+        public const string PredictionLine_WidthSlide = "PredictionLineWidthSlide";
     }
     
     public class MultiCutPreference 
     {
         #region ATTR
-
+        
+        public readonly Color DefaultColor = Colors.LimeGreen;
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
         public bool IsSplitChecked { get; set; }
         public bool IsProphetChecked { get; set; }
         public bool IsPriorityChecked { get; set; }
+        public System.Drawing.Color ProphetColor { get; set; }
+        public int ProphetWidth { get; set; }
 
 
         #endregion
@@ -49,14 +54,21 @@ namespace MultiCut
             this.PlugInSettings.SetColor(keyword, isSettingExist ? value : defaultValue);
         }
 
+        private void LoadIntSetting(string keyword, PersistentSettings plugInSettingCollection, int defaultValue)
+        {
+            bool isSettingExist = plugInSettingCollection.TryGetInteger(keyword, out int value);
+            this.PlugInSettings.SetInteger(keyword, isSettingExist ? value : defaultValue);
+        }
+
         public void LoadSettingBundle()
         {
             this.LoadBoolSetting(SettingKey.General_SplitCheck, PlugInSettings, false);
             this.LoadBoolSetting(SettingKey.PredictionLine_EnabledCheck, PlugInSettings, true);
             this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
             this.LoadBoolSetting(SettingKey.PredictionLine_ColorCheck, PlugInSettings, false);
-            this.LoadColorSetting(SettingKey.PredictionLine_ColorPick, PlugInSettings, Colors.LimeGreen.ToSystemDrawing());
-            
+            this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, this.DefaultColor.ToSystemDrawing());
+            this.LoadBoolSetting(SettingKey.PredictionLine_WidthCheck, PlugInSettings, false);
+            this.LoadIntSetting(SettingKey.PredictionLine_WidthSlide, PlugInSettings, 1);
         }
         
         #endregion
@@ -121,7 +133,7 @@ namespace MultiCut
             this.Padding = new Padding(10);
             
             this.SetSplitCheck();
-            this.SetLayout();
+            this.SetGroupLayout();
 
             this.Content = this.GroupBoxLayout;
 
@@ -146,7 +158,7 @@ namespace MultiCut
             };
         }
 
-        public void SetLayout()
+        public void SetGroupLayout()
         {
             this.GroupBoxLayout = new DynamicLayout();
             this.GroupBoxLayout.AddRow(this.SplitCheck);
@@ -171,7 +183,7 @@ namespace MultiCut
             this.SetColorPick();
             this.SetWidthCheck();
             this.SetWidthSlide();
-            this.SetLayout();
+            this.SetGroupLayout();
 
             this.Content = this.GroupBoxLayout;
         }
@@ -204,6 +216,7 @@ namespace MultiCut
             bool isChecked = (bool)this.EnableCheck.Checked;
             // set DB //
             this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_EnabledCheck, isChecked);
+            this.McPlugin.SaveSettings();
             //set mcp ATTR //
             this.SetMcPrefProphet(isChecked);
             // distribute sub setting //
@@ -241,6 +254,7 @@ namespace MultiCut
             // ReSharper disable once PossibleInvalidOperationException
             bool isChecked = (bool)this.PriorityCheck.Checked;
             this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_PriorityCheck, isChecked);
+            this.McPlugin.SaveSettings();
             this.SetMcPrefPriority(isChecked);
         }
         private void SetMcPrefPriority(bool isChecked)
@@ -264,18 +278,19 @@ namespace MultiCut
         {
             bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLine_ColorCheck);
             this.ColorCheck.Checked = isChecked;
-            this.SetMcPrefColorCheck(isChecked);
         }
         private void OnColorCheckChanged(object sender, EventArgs e)
         {
             // ReSharper disable once PossibleInvalidOperationException
             bool isChecked = (bool)this.ColorCheck.Checked;
             this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_ColorCheck, isChecked);
-            this.SetMcPrefColorCheck(isChecked);
-        }
-        private void SetMcPrefColorCheck(bool isChecked)
-        {
-            this.ColorCheck.Checked = isChecked;
+            this.McPlugin.SaveSettings();
+            // Set Default Color of ColorPick
+            Color color = isChecked 
+                        ? this.McPlugin.Settings.GetColor(SettingKey.PredictionLine_ColorCustom).ToEto() 
+                        : this.DefaultColor;
+            this.ColorPick.Value = color;
+            this.SetMcPrefColor(color);
         }
         private void OnColorPickEnabled(object sender, EventArgs e)
         {
@@ -288,28 +303,70 @@ namespace MultiCut
         #region ColorPick
         
         private ColorPicker ColorPick { get; set; }
+        private Color DefaultColor => this.McPref.DefaultColor;
         private void SetColorPick()
         {
-            this.ColorPick = new ColorPicker() { Value = Colors.LimeGreen };
-            this.ColorPick.Load += null;
-            this.ColorPick.ValueChanged += null;
+            this.ColorPick = new ColorPicker(){ Value = this.DefaultColor };
+            this.ColorPick.Load += OnColorPickLoad;
+            this.ColorPick.ValueChanged += OnColorPickChanged;
+        }
+        private void OnColorPickLoad(object sender, EventArgs e)
+        {
+            Color color = this.McPlugin.Settings.GetColor(SettingKey.PredictionLine_ColorCustom).ToEto(); 
+            this.ColorPick.Value = color;
+            this.SetMcPrefColor(color);
+        }
+        private void OnColorPickChanged(object sender, EventArgs e)
+        {
+            Color color = this.ColorPick.Value;
+            if (color != this.DefaultColor)
+            {
+                this.McPlugin.Settings.SetColor(SettingKey.PredictionLine_ColorCustom, color.ToSystemDrawing());
+                this.SetMcPrefColor(color);
+                this.McPlugin.SaveSettings();
+            }
+        }
+        private void SetMcPrefColor(Color color)
+        {
+            this.McPref.ProphetColor = color.ToSystemDrawing();
         }
 
         #endregion
-        #region LineWidth
+        #region WidthCheck
 
         private CheckBox WidthCheck { get; set; }
         private void SetWidthCheck()
         {
             this.WidthCheck = new CheckBox() { Text = "Customize Linewidth", ThreeState = false };
-            this.WidthCheck.Load += OnWidthChecked;
-            this.WidthCheck.CheckedChanged += OnWidthChecked;
+            this.WidthCheck.Load += OnWidthCheckLoad;
+            this.WidthCheck.Load += OnWidthSlideEnabled;
+            this.WidthCheck.CheckedChanged += OnWidthCheckChanged;
+            this.WidthCheck.CheckedChanged += OnWidthSlideEnabled;
         }
-        private void OnWidthChecked(object sender, EventArgs e)
+        private void OnWidthCheckLoad(object sender, EventArgs e)
+        {
+            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLine_WidthCheck);
+            this.WidthCheck.Checked = isChecked;
+        }
+        private void OnWidthCheckChanged(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            bool isChecked = (bool)this.WidthCheck.Checked;
+            this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_WidthCheck, isChecked);
+            // Set Slide Number
+            if (!isChecked)
+            {
+                this.McPref.ProphetWidth = RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
+            }
+        }
+        private void OnWidthSlideEnabled(object sender, EventArgs e)
         {
             bool doubleCheck = MethodBasic.DoubleCheck(this.EnableCheck.Checked, this.WidthCheck.Checked);
             this.WidthSlide.Enabled = doubleCheck;
         }
+
+        #endregion
+        #region WidthSlide
 
         private Slider WidthSlide { get; set; }
         private void SetWidthSlide()
@@ -322,12 +379,29 @@ namespace MultiCut
                 TickFrequency = 1,
                 SnapToTick = true
             };
+            this.WidthSlide.Load += OnWidthSlideLoad;
+            this.WidthSlide.ValueChanged += OnWidthSlideChanged;
         }
-
+        private void OnWidthSlideLoad(object sender, EventArgs e)
+        {
+            int slideNum = this.McPlugin.Settings.GetInteger(SettingKey.PredictionLine_WidthSlide);
+            this.WidthSlide.Value = slideNum;
+            this.SetMcPrefInt(slideNum);
+        }
+        private void OnWidthSlideChanged(object sender, EventArgs e)
+        {
+            int slideNum = this.WidthSlide.Value;
+            this.McPlugin.Settings.SetInteger(SettingKey.PredictionLine_WidthSlide, slideNum);
+            this.SetMcPrefInt(slideNum);
+        }
+        private void SetMcPrefInt(int slideNum)
+        {
+            this.McPref.ProphetWidth = slideNum;
+        }
         #endregion
         #region Layout
 
-        public void SetLayout()
+        public void SetGroupLayout()
         {
             this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> predictionControls = new Control[]
@@ -350,7 +424,7 @@ namespace MultiCut
         MultiCutPreference McPref { get; }
         MultiCutPlugin McPlugin { get; }
         DynamicLayout GroupBoxLayout { get; set; }
-        void SetLayout();
+        void SetGroupLayout();
     }
 
 }
