@@ -354,9 +354,20 @@ namespace MultiCut
             bool isChecked = (bool)this.WidthCheck.Checked;
             this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_WidthCheck, isChecked);
             // Set Slide Number
-            if (!isChecked)
+            int slideNum = !isChecked 
+                         ? RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness 
+                         : this.McPlugin.Settings.GetInteger(SettingKey.PredictionLine_WidthSlide);
+            if (slideNum < 1)
             {
-                this.McPref.ProphetWidth = RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
+                this.WidthSlide.Value = 1;
+            }
+            else if (slideNum > 9)
+            {
+                this.WidthSlide.Value = 9;
+            }
+            else
+            {
+                this.WidthSlide.Value = slideNum;
             }
         }
         private void OnWidthSlideEnabled(object sender, EventArgs e)
@@ -391,8 +402,12 @@ namespace MultiCut
         private void OnWidthSlideChanged(object sender, EventArgs e)
         {
             int slideNum = this.WidthSlide.Value;
-            this.McPlugin.Settings.SetInteger(SettingKey.PredictionLine_WidthSlide, slideNum);
-            this.SetMcPrefInt(slideNum);
+            int displayThickness = RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
+            if (slideNum != displayThickness & 0 < slideNum & slideNum < 10)
+            {
+                this.McPlugin.Settings.SetInteger(SettingKey.PredictionLine_WidthSlide, slideNum);
+                this.SetMcPrefInt(slideNum);
+            }
         }
         private void SetMcPrefInt(int slideNum)
         {
