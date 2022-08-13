@@ -168,10 +168,12 @@ namespace MultiCut
 
     public class PredictionLineBox : GroupBox, IGroupCommon
     {
+        private readonly RhinoDoc currentDoc = MethodBasic.CurrentDoc;
         public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
         public static PredictionLineBox Instance { get; } = new PredictionLineBox();
+
 
         private PredictionLineBox()
         {
@@ -355,20 +357,10 @@ namespace MultiCut
             this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_WidthCheck, isChecked);
             // Set Slide Number
             int slideNum = !isChecked 
-                         ? RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness 
+                         ? this.displayThickness
                          : this.McPlugin.Settings.GetInteger(SettingKey.PredictionLine_WidthSlide);
-            if (slideNum < 1)
-            {
-                this.WidthSlide.Value = 1;
-            }
-            else if (slideNum > 9)
-            {
-                this.WidthSlide.Value = 9;
-            }
-            else
-            {
-                this.WidthSlide.Value = slideNum;
-            }
+            int slideNumChanged = this.RemapInt(slideNum);
+            this.WidthSlide.Value = slideNumChanged;
         }
         private void OnWidthSlideEnabled(object sender, EventArgs e)
         {
@@ -379,6 +371,7 @@ namespace MultiCut
         #endregion
         #region WidthSlide
 
+        private int displayThickness => this.currentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
         private Slider WidthSlide { get; set; }
         private void SetWidthSlide()
         {
@@ -390,29 +383,42 @@ namespace MultiCut
                 TickFrequency = 1,
                 SnapToTick = true
             };
-            this.WidthSlide.Load += OnWidthSlideLoad;
+            this.WidthSlide.Load += OnWidthCheckChanged;
             this.WidthSlide.ValueChanged += OnWidthSlideChanged;
-        }
-        private void OnWidthSlideLoad(object sender, EventArgs e)
-        {
-            int slideNum = this.McPlugin.Settings.GetInteger(SettingKey.PredictionLine_WidthSlide);
-            this.WidthSlide.Value = slideNum;
-            this.SetMcPrefInt(slideNum);
         }
         private void OnWidthSlideChanged(object sender, EventArgs e)
         {
             int slideNum = this.WidthSlide.Value;
-            int displayThickness = RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
-            if (slideNum != displayThickness & 0 < slideNum & slideNum < 10)
-            {
-                this.McPlugin.Settings.SetInteger(SettingKey.PredictionLine_WidthSlide, slideNum);
-                this.SetMcPrefInt(slideNum);
+            int slideNumRemap = this.RemapInt(slideNum);
+            int displayNum = this.currentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
+            if (displayNum != slideNumRemap)
+            { 
+                this.McPlugin.Settings.SetInteger(SettingKey.PredictionLine_WidthSlide, slideNumRemap);
             }
+            this.SetMcPrefInt(slideNumRemap);
         }
         private void SetMcPrefInt(int slideNum)
         {
             this.McPref.ProphetWidth = slideNum;
         }
+        private int RemapInt(int slideNum)
+        {
+            int reMappedInt;
+            if (0 < slideNum & slideNum < 10)
+            {
+                reMappedInt = slideNum;
+            }
+            else if (slideNum >= 10)
+            {
+                reMappedInt = 10;
+            }
+            else
+            {
+                reMappedInt = 1;
+            }
+            return reMappedInt;
+        }
+
         #endregion
         #region Layout
 

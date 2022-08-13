@@ -15,6 +15,8 @@ namespace MultiCut
     
     internal static class MethodBasic
     {
+        public static RhinoDoc CurrentDoc { get; set; }
+
         public static bool ObjectCollecter(out Brep brep2BPassed, out ObjRef brepRef2BPassed)
         {
             brep2BPassed = null;
