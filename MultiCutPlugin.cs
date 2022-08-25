@@ -1,11 +1,10 @@
-﻿ using Rhino.PlugIns;
+﻿using Rhino.PlugIns;
 
 namespace MultiCut
 {
     public class MultiCutPlugin : PlugIn
     {
         #region ATTR
-        
         // ReSharper disable once MemberCanBePrivate.Global
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public static MultiCutPlugin Instance { get; private set; }
@@ -13,13 +12,10 @@ namespace MultiCut
 
         #endregion
         #region CTOR
-        
         public MultiCutPlugin()
         {
             Instance = this;
-
         }
-
         #endregion
         #region MTHD
 
@@ -30,10 +26,5 @@ namespace MultiCut
         }
 
         #endregion
-        
-        
-
-        
-        
     }
 }

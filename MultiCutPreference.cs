@@ -121,6 +121,7 @@ namespace MultiCut
 
     public class GeneralBox : GroupBox, IGroupCommon
     {
+        public RhinoDoc CurrentDoc => MethodBasic.CurrentDoc;
         public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
@@ -168,7 +169,7 @@ namespace MultiCut
 
     public class PredictionLineBox : GroupBox, IGroupCommon
     {
-        private readonly RhinoDoc currentDoc = MethodBasic.CurrentDoc;
+        public RhinoDoc CurrentDoc => MethodBasic.CurrentDoc;
         public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
@@ -359,7 +360,7 @@ namespace MultiCut
             int slideNum = !isChecked 
                          ? this.displayThickness
                          : this.McPlugin.Settings.GetInteger(SettingKey.PredictionLine_WidthSlide);
-            int slideNumChanged = this.RemapInt(slideNum);
+            int slideNumChanged = MethodBasic.RemapInt(slideNum);
             this.WidthSlide.Value = slideNumChanged;
         }
         private void OnWidthSlideEnabled(object sender, EventArgs e)
@@ -371,7 +372,7 @@ namespace MultiCut
         #endregion
         #region WidthSlide
 
-        private int displayThickness => this.currentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
+        private int displayThickness => this.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
         private Slider WidthSlide { get; set; }
         private void SetWidthSlide()
         {
@@ -389,8 +390,8 @@ namespace MultiCut
         private void OnWidthSlideChanged(object sender, EventArgs e)
         {
             int slideNum = this.WidthSlide.Value;
-            int slideNumRemap = this.RemapInt(slideNum);
-            int displayNum = this.currentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
+            int slideNumRemap = MethodBasic.RemapInt(slideNum);
+            int displayNum = this.displayThickness;
             if (displayNum != slideNumRemap)
             { 
                 this.McPlugin.Settings.SetInteger(SettingKey.PredictionLine_WidthSlide, slideNumRemap);
@@ -400,23 +401,6 @@ namespace MultiCut
         private void SetMcPrefInt(int slideNum)
         {
             this.McPref.ProphetWidth = slideNum;
-        }
-        private int RemapInt(int slideNum)
-        {
-            int reMappedInt;
-            if (0 < slideNum & slideNum < 10)
-            {
-                reMappedInt = slideNum;
-            }
-            else if (slideNum >= 10)
-            {
-                reMappedInt = 10;
-            }
-            else
-            {
-                reMappedInt = 1;
-            }
-            return reMappedInt;
         }
 
         #endregion
@@ -440,8 +424,20 @@ namespace MultiCut
         #endregion
     }
 
+    public class OctopusLineBox : GroupBox, IGroupCommon
+    {
+        public RhinoDoc CurrentDoc => MethodBasic.CurrentDoc;
+        public MultiCutPreference McPref => MultiCutPreference.Instance;
+        public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        public DynamicLayout GroupBoxLayout { get; set; }
+        public void SetGroupLayout()
+        {
+        }
+    }
+
     public interface IGroupCommon
     {
+        RhinoDoc CurrentDoc { get; }
         MultiCutPreference McPref { get; }
         MultiCutPlugin McPlugin { get; }
         DynamicLayout GroupBoxLayout { get; set; }

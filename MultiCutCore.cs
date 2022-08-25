@@ -16,6 +16,24 @@ namespace MultiCut
     internal static class MethodBasic
     {
         public static RhinoDoc CurrentDoc { get; set; }
+        
+        public static int RemapInt(int slideNum)
+        {
+            int reMappedInt;
+            if (0 < slideNum & slideNum < 10)
+            {
+                reMappedInt = slideNum;
+            }
+            else if (slideNum >= 10)
+            {
+                reMappedInt = 10;
+            }
+            else
+            {
+                reMappedInt = 1;
+            }
+            return reMappedInt;
+        }
 
         public static bool ObjectCollecter(out Brep brep2BPassed, out ObjRef brepRef2BPassed)
         {
@@ -712,7 +730,7 @@ namespace MultiCut
     internal class GetPointTemplate : GetPoint
     {
         protected Core coreObj;
-        protected MultiCutPreference McPref => MultiCutPreference.Instance;
+        private MultiCutPreference McPref => MultiCutPreference.Instance;
         protected GetPointTemplate(Core coreobjPassed)
         {
             coreObj = coreobjPassed;
