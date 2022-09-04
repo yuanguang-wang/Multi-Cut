@@ -18,6 +18,7 @@ namespace MultiCut
         public const string PredictionLine_ColorCustom = "PredictionLineColorCustom";
         public const string PredictionLine_WidthCheck = "PredictionLineWidthCheck";
         public const string PredictionLine_WidthSlide = "PredictionLineWidthSlide";
+        public const string OctopusLine_EnableCheck = "OctopusLineEnableCheck";
     }
     
     public class MultiCutPreference 
@@ -69,6 +70,7 @@ namespace MultiCut
             this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, this.DefaultColor.ToSystemDrawing());
             this.LoadBoolSetting(SettingKey.PredictionLine_WidthCheck, PlugInSettings, false);
             this.LoadIntSetting(SettingKey.PredictionLine_WidthSlide, PlugInSettings, 1);
+            this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
         }
         
         #endregion
@@ -430,8 +432,30 @@ namespace MultiCut
         public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
+
+        #region EnableCheck
+
+        private CheckBox EnableCheck { get; set; }
+        private void SetEnableCheck()
+        {
+            EnableCheck.Load += this.GetDB;
+            EnableCheck.CheckedChanged += null;
+        }
+        private void GetDB(object sender, EventArgs e)
+        {
+            EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck);
+        }
+        private void SetDB(object sender, EventArgs e)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, (bool)EnableCheck.Checked);
+        }
+
+
+        #endregion
         public void SetGroupLayout()
         {
+            this.SetEnableCheck();
         }
     }
 
