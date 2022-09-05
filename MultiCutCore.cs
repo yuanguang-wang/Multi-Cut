@@ -623,11 +623,15 @@ namespace MultiCut
             }
             if (!McPref.IsOctopusChecked)
             {
+                this.OctopusCascade = new Dictionary<Curve, string>();
                 return;
             }
             this.LastFaceFinder();
             this.OctopusRawGenerator();
-            this.ISOCrvGenerator();
+            if (McPref.IsIsoChecked)
+            {
+                this.ISOCrvGenerator(); 
+            }
             this.CPLCrvGenerator();
             this.WPLCrvGenerator();
             this.OctopusCascader();
@@ -724,7 +728,7 @@ namespace MultiCut
 
         public void CutOperation()
         {
-            if (McPref.IsPriorityChecked)
+            if (McPref.IsPriorityChecked & McPref.IsProphetChecked)
             {
                 this.CutByProphet();
             }
@@ -751,11 +755,9 @@ namespace MultiCut
         protected override void OnMouseMove(GetPointMouseEventArgs e)
         {
             coreObj.IsAssistKeyDown = true;
-            //coreObj.IsAssistKeyDown = e.ControlKeyDown;
             coreObj.CurrentPt = e.Point;
             
             int isPtOnEdge = coreObj.CurrentEdgeFinder();
-            
             if (isPtOnEdge > 0)
             {
                 coreObj.MouseMoveBaseBundle();
@@ -820,24 +822,25 @@ namespace MultiCut
         protected override void OnMouseMove(GetPointMouseEventArgs e)
         {
             coreObj.MouseMoveNextBundle();
-            
             base.OnMouseMove(e);
         }
 
         protected override void OnDynamicDraw(GetPointDrawEventArgs e)
         {
-            foreach (Curve crv in coreObj.OctopusCascade.Keys)
+            if (coreObj.OctopusCascade != null)
             {
-                e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                foreach (Curve crv in coreObj.OctopusCascade.Keys)
+                {
+                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                }
+                foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascade)
+                {
+                    e.Display.Draw2dText(element.Value, System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
+                    e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Blue);
+                    this.AddConstructionPoint(element.Key.PointAtEnd);
+                }
             }
-
-            foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascade)
-            {
-                e.Display.Draw2dText(element.Value, System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
-                e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Blue);
-                this.AddConstructionPoint(element.Key.PointAtEnd);
-            }
-
+            
             if (coreObj.OctopusCustom != null)
             {
                 e.Display.DrawCurve(coreObj.OctopusCustom, System.Drawing.Color.Blue, 3);

@@ -19,6 +19,7 @@ namespace MultiCut
         public const string PredictionLine_WidthCheck = "PredictionLineWidthCheck";
         public const string PredictionLine_WidthSlide = "PredictionLineWidthSlide";
         public const string OctopusLine_EnableCheck = "OctopusLineEnableCheck";
+        public const string OctopusLine_ISOCheck = "OctopusLineIsoCheck";
     }
     
     public class MultiCutPreference 
@@ -33,6 +34,7 @@ namespace MultiCut
         public System.Drawing.Color ProphetColor { get; set; }
         public int ProphetWidth { get; set; }
         public bool IsOctopusChecked { get; set; }
+        public bool IsIsoChecked { get; set; }
 
 
         #endregion
@@ -44,34 +46,45 @@ namespace MultiCut
         #endregion
         #region MTHD
         
-        private void LoadBoolSetting(string keyword, PersistentSettings plugInSettingCollection, bool defaultValue)
+        private bool LoadBoolSetting(string keyword, PersistentSettings plugInSettingCollection, bool defaultValue)
         {
             bool isSettingExist = plugInSettingCollection.TryGetBool(keyword, out bool value);
-            this.PlugInSettings.SetBool(keyword, isSettingExist ? value : defaultValue);
+            bool initialBool = isSettingExist ? value : defaultValue;
+            this.PlugInSettings.SetBool(keyword, initialBool);
+            return initialBool;
         }
 
-        private void LoadColorSetting(string keyword, PersistentSettings plugInSettingCollection, System.Drawing.Color defaultValue)
+        private System.Drawing.Color LoadColorSetting(string keyword, PersistentSettings plugInSettingCollection, System.Drawing.Color defaultValue)
         {
             bool isSettingExist = plugInSettingCollection.TryGetColor(keyword, out System.Drawing.Color value);
-            this.PlugInSettings.SetColor(keyword, isSettingExist ? value : defaultValue);
+            System.Drawing.Color initialColor = isSettingExist ? value : defaultValue;
+            this.PlugInSettings.SetColor(keyword, initialColor);
+            return initialColor;
         }
 
-        private void LoadIntSetting(string keyword, PersistentSettings plugInSettingCollection, int defaultValue)
+        private int LoadIntSetting(string keyword, PersistentSettings plugInSettingCollection, int defaultValue)
         {
             bool isSettingExist = plugInSettingCollection.TryGetInteger(keyword, out int value);
-            this.PlugInSettings.SetInteger(keyword, isSettingExist ? value : defaultValue);
+            int initialValue = isSettingExist ? value : defaultValue;
+            this.PlugInSettings.SetInteger(keyword, initialValue);
+            return initialValue; 
         }
 
+        /// <summary>
+        /// Set DataBase !!!
+        /// </summary>
         public void LoadSettingBundle()
         {
-            this.LoadBoolSetting(SettingKey.General_SplitCheck, PlugInSettings, false);
-            this.LoadBoolSetting(SettingKey.PredictionLine_EnabledCheck, PlugInSettings, true);
-            this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
+            this.IsSplitChecked = this.LoadBoolSetting(SettingKey.General_SplitCheck, PlugInSettings, false);
+            this.IsProphetChecked = this.LoadBoolSetting(SettingKey.PredictionLine_EnabledCheck, PlugInSettings, true);
+            this.IsPriorityChecked = this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
             this.LoadBoolSetting(SettingKey.PredictionLine_ColorCheck, PlugInSettings, false);
-            this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, this.DefaultColor.ToSystemDrawing());
+            this.ProphetColor = this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, this.DefaultColor.ToSystemDrawing());
             this.LoadBoolSetting(SettingKey.PredictionLine_WidthCheck, PlugInSettings, false);
-            this.LoadIntSetting(SettingKey.PredictionLine_WidthSlide, PlugInSettings, 1);
-            this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
+            this.ProphetWidth = this.LoadIntSetting(SettingKey.PredictionLine_WidthSlide, PlugInSettings, 1);
+            
+            this.IsOctopusChecked = this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
+            this.IsIsoChecked = this.LoadBoolSetting(SettingKey.OctopusLine_ISOCheck, PlugInSettings, true);
         }
         
         #endregion
@@ -440,7 +453,7 @@ namespace MultiCut
             this.Text = "Assistant Line";
             
             this.SetEnableCheck();
-            
+            this.SetIsoCheck(); 
             this.SetGroupLayout();
             this.Content = this.GroupBoxLayout;
         }
@@ -451,14 +464,14 @@ namespace MultiCut
         private void SetEnableCheck()
         {
             this.EnableCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
-            EnableCheck.Load += this.GetEnableDB;
-            EnableCheck.CheckedChanged += SetEnableDB;
-            EnableCheck.CheckedChanged += this.NotificateMCT;
-            EnableCheck.CheckedChanged += this.EnableSubOptions;
+            this.EnableCheck.Load += this.GetEnableDB;
+            this.EnableCheck.CheckedChanged += SetEnableDB;
+            this.EnableCheck.CheckedChanged += this.NotificateMCT;
+            this.EnableCheck.CheckedChanged += this.EnableSubOptions;
         }
         private void GetEnableDB(object sender, EventArgs e)
         {
-            EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck);
+            this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck);
         }
         private void SetEnableDB(object sender, EventArgs e)
         {
@@ -472,6 +485,25 @@ namespace MultiCut
         {
             
         }
+
+        #endregion
+        #region ISOCheck
+
+        private CheckBox ISOCheck { get; set; }
+        private void SetIsoCheck()
+        {
+            this.ISOCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
+            this.ISOCheck.Load += (sender, args) =>
+            {
+                this.ISOCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_ISOCheck); // Get DB //
+            };
+            this.ISOCheck.CheckedChanged += (sender, args) =>
+            {
+                McPlugin.Settings.SetBool(SettingKey.OctopusLine_ISOCheck, MethodBasic.SafeCast(this.ISOCheck.Checked)); // Set DB //
+                
+            };
+        }
+
 
         #endregion
         public void SetGroupLayout()
