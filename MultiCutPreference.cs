@@ -32,6 +32,7 @@ namespace MultiCut
         public bool IsPriorityChecked { get; set; }
         public System.Drawing.Color ProphetColor { get; set; }
         public int ProphetWidth { get; set; }
+        public bool IsOctopusChecked { get; set; }
 
 
         #endregion
@@ -80,8 +81,9 @@ namespace MultiCut
     {
         private GeneralBox General => GeneralBox.Instance;
         private PredictionLineBox PredictionLine => PredictionLineBox.Instance;
+        private OctopusLineBox OctopusLine => OctopusLineBox.Instance;
         private DynamicLayout PreferenceLayout { get; set; }
-
+        
 
         public PreferenceForm()
         {
@@ -102,7 +104,7 @@ namespace MultiCut
             this.PreferenceLayout = new DynamicLayout();
 
             this.PreferenceLayout.Spacing = new Size(10,10);
-            IEnumerable<GroupBox> controls = new GroupBox[] { this.General, this.PredictionLine };
+            IEnumerable<GroupBox> controls = new GroupBox[] { this.General, this.PredictionLine, this.OctopusLine};
             this.PreferenceLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
 
         }
@@ -176,7 +178,6 @@ namespace MultiCut
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
         public static PredictionLineBox Instance { get; } = new PredictionLineBox();
-
 
         private PredictionLineBox()
         {
@@ -432,30 +433,60 @@ namespace MultiCut
         public MultiCutPreference McPref => MultiCutPreference.Instance;
         public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
+        public static OctopusLineBox Instance { get; } = new OctopusLineBox();
+
+        private OctopusLineBox()
+        {
+            this.Text = "Assistant Line";
+            
+            this.SetEnableCheck();
+            
+            this.SetGroupLayout();
+            this.Content = this.GroupBoxLayout;
+        }
 
         #region EnableCheck
 
         private CheckBox EnableCheck { get; set; }
         private void SetEnableCheck()
         {
-            EnableCheck.Load += this.GetDB;
-            EnableCheck.CheckedChanged += null;
+            this.EnableCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
+            EnableCheck.Load += this.GetEnableDB;
+            EnableCheck.CheckedChanged += SetEnableDB;
+            EnableCheck.CheckedChanged += this.NotificateMCT;
+            EnableCheck.CheckedChanged += this.EnableSubOptions;
         }
-        private void GetDB(object sender, EventArgs e)
+        private void GetEnableDB(object sender, EventArgs e)
         {
             EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck);
         }
-        private void SetDB(object sender, EventArgs e)
+        private void SetEnableDB(object sender, EventArgs e)
         {
-            // ReSharper disable once PossibleInvalidOperationException
-            McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, (bool)EnableCheck.Checked);
+            McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, MethodBasic.SafeCast(EnableCheck.Checked));
         }
-
+        private void NotificateMCT(object sender, EventArgs e)
+        {
+            McPref.IsOctopusChecked = MethodBasic.SafeCast(EnableCheck.Checked);
+        }
+        private void EnableSubOptions(object sender, EventArgs e)
+        {
+            
+        }
 
         #endregion
         public void SetGroupLayout()
         {
-            this.SetEnableCheck();
+            this.GroupBoxLayout = new DynamicLayout();
+            IEnumerable<Control> predictionControls = new Control[]
+            {
+                this.EnableCheck,
+                //this.PriorityCheck,
+                //this.ColorCheck,
+                //this.ColorPick,
+                //this.WidthCheck,
+                //this.WidthSlide
+            };
+            this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
         }
     }
 

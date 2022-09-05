@@ -175,6 +175,12 @@ namespace MultiCut
             return upperCast && localCast;
         }
 
+        public static bool SafeCast(bool? boolPassed)
+        {
+            // ReSharper disable once PossibleInvalidOperationException
+            return (bool)boolPassed;
+        }
+
     }
 
     public class Core
@@ -608,10 +614,14 @@ namespace MultiCut
 
         }
 
-        public void CtorNextBundle()
+        public void OctopusRunBundle()
         {
             int isLastPtOnCrv = this.LastEdgeFinder();
             if (!(isLastPtOnCrv > 0))
+            {
+                return;
+            }
+            if (!McPref.IsOctopusChecked)
             {
                 return;
             }
@@ -622,7 +632,7 @@ namespace MultiCut
             this.WPLCrvGenerator();
             this.OctopusCascader();
         }
-        
+
         public void GetPtDispatchBundle()
         {
             this.OctopusOverlapDispatcher();
@@ -696,7 +706,7 @@ namespace MultiCut
             }
             else
             {
-                RhinoApp.WriteLine("Prediction line is not enabled");
+                RhinoApp.WriteLine("No Prediction Line detected.");
             }
         }
         
@@ -708,7 +718,7 @@ namespace MultiCut
             }
             else
             {
-                RhinoApp.WriteLine("Octopus curve collection is empty");
+                RhinoApp.WriteLine("No Assistent Line detected.");
             }
         }
 
@@ -801,7 +811,7 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
             coreObj.GetPtDispatchBundle();
-            coreObj.CtorNextBundle();
+            coreObj.OctopusRunBundle();
             
             this.SetCommandPrompt("Pick the next point, or press ENTER to finish cut");
 
