@@ -20,6 +20,8 @@ namespace MultiCut
         public const string PredictionLine_WidthSlide = "PredictionLineWidthSlide";
         public const string OctopusLine_EnableCheck = "OctopusLineEnableCheck";
         public const string OctopusLine_ISOCheck = "OctopusLineIsoCheck";
+        public const string OctopusLine_CPLCheck = "OctopusLineCLPCheck";
+        public const string OctopusLine_WLPCheck = "OctopusLineWLPCheck";
     }
     
     public class MultiCutPreference 
@@ -35,6 +37,8 @@ namespace MultiCut
         public int ProphetWidth { get; set; }
         public bool IsOctopusChecked { get; set; }
         public bool IsIsoChecked { get; set; }
+        public bool IsCplChecked { get; set; }
+        public bool IsWplChecked { get; set; }
 
 
         #endregion
@@ -85,6 +89,9 @@ namespace MultiCut
             
             this.IsOctopusChecked = this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
             this.IsIsoChecked = this.LoadBoolSetting(SettingKey.OctopusLine_ISOCheck, PlugInSettings, true);
+            this.IsCplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_CPLCheck, PlugInSettings, true);
+            this.IsWplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_WLPCheck, PlugInSettings, true);
+
         }
         
         #endregion
@@ -161,10 +168,9 @@ namespace MultiCut
         {
             this.SplitCheck = new CheckBox(){Text = "Split if possible", ThreeState = false};
             this.SplitCheck.Load += (sender, args) =>
-            {
+            { 
                 bool isSplitted = this.McPlugin.Settings.GetBool(SettingKey.General_SplitCheck);
                 this.SplitCheck.Checked = isSplitted;
-                this.McPref.IsSplitChecked = isSplitted;
             };
             this.SplitCheck.CheckedChanged += (sender, args) =>
             {
@@ -452,8 +458,6 @@ namespace MultiCut
         {
             this.Text = "Assistant Line";
             
-            this.SetEnableCheck();
-            this.SetIsoCheck(); 
             this.SetGroupLayout();
             this.Content = this.GroupBoxLayout;
         }
@@ -487,34 +491,71 @@ namespace MultiCut
         }
 
         #endregion
-        #region ISOCheck
+        #region SubCheck
 
         private CheckBox ISOCheck { get; set; }
         private void SetIsoCheck()
         {
-            this.ISOCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
+            this.ISOCheck = new CheckBox(){ Text = "Isocurve Intersection", ThreeState = false };
             this.ISOCheck.Load += (sender, args) =>
             {
                 this.ISOCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_ISOCheck); // Get DB //
             };
             this.ISOCheck.CheckedChanged += (sender, args) =>
             {
-                McPlugin.Settings.SetBool(SettingKey.OctopusLine_ISOCheck, MethodBasic.SafeCast(this.ISOCheck.Checked)); // Set DB //
-                
+                bool value = MethodBasic.SafeCast(this.ISOCheck.Checked);
+                McPlugin.Settings.SetBool(SettingKey.OctopusLine_ISOCheck, value); // Set DB //
+                McPref.IsIsoChecked = value; // Notify MCT//
             };
         }
 
+        private CheckBox CPLCheck { get; set; }
+        private void SetCplChecked()
+        {
+           this.CPLCheck = new CheckBox(){ Text = "CPlane Intersection", ThreeState = false };
+           this.CPLCheck.Load += (sender, args) =>
+           {
+               this.CPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_CPLCheck); // get DB //
+           };
+           this.CPLCheck.Load += (sender, args) =>
+           {
+               bool value = MethodBasic.SafeCast(this.CPLCheck.Checked);
+               McPlugin.Settings.SetBool(SettingKey.OctopusLine_CPLCheck, value); // Set DB //
+               McPref.IsCplChecked = value; // Notify MCT //
+           };
+        }
+
+        private CheckBox WPLCheck { get; set; }
+        private void SetWplChecked()
+        {
+            this.WPLCheck = new CheckBox(){ Text = "WPlane Intersection", ThreeState = false };
+            this.WPLCheck.Load += (sender, args) =>
+            {
+                this.WPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_WLPCheck); // get DB //
+            };
+            this.WPLCheck.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.WPLCheck.Checked);
+                McPlugin.Settings.SetBool(SettingKey.OctopusLine_WLPCheck, value); // Set DB //
+                McPref.IsWplChecked = value; // Notify MCT //
+            };
+        }
 
         #endregion
         public void SetGroupLayout()
         {
+            this.SetEnableCheck();
+            this.SetIsoCheck(); 
+            this.SetCplChecked();
+            this.SetWplChecked();
+            
             this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> predictionControls = new Control[]
             {
                 this.EnableCheck,
-                //this.PriorityCheck,
-                //this.ColorCheck,
-                //this.ColorPick,
+                this.ISOCheck,
+                this.CPLCheck,
+                this.WPLCheck,
                 //this.WidthCheck,
                 //this.WidthSlide
             };

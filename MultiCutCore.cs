@@ -621,7 +621,9 @@ namespace MultiCut
             {
                 return;
             }
-            if (!McPref.IsOctopusChecked)
+            
+            bool trinityBool = McPref.IsIsoChecked & McPref.IsCplChecked & McPref.IsWplChecked;
+            if (!McPref.IsOctopusChecked | trinityBool)
             {
                 this.OctopusCascade = new Dictionary<Curve, string>();
                 return;
@@ -632,8 +634,14 @@ namespace MultiCut
             {
                 this.ISOCrvGenerator(); 
             }
-            this.CPLCrvGenerator();
-            this.WPLCrvGenerator();
+            if (McPref.IsCplChecked)
+            {
+                this.CPLCrvGenerator(); 
+            }
+            if (McPref.IsWplChecked)
+            {
+                this.WPLCrvGenerator(); 
+            } 
             this.OctopusCascader();
         }
 
