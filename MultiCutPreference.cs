@@ -21,14 +21,19 @@ namespace MultiCut
         public const string OctopusLine_EnableCheck = "OctopusLineEnableCheck";
         public const string OctopusLine_ISOCheck = "OctopusLineIsoCheck";
         public const string OctopusLine_CPLCheck = "OctopusLineCLPCheck";
-        public const string OctopusLine_WLPCheck = "OctopusLineWLPCheck";
+        public const string OctopusLine_WPLCheck = "OctopusLineWLPCheck";
+        public const string OctopusLine_ColorCheck = "OctopusLineColorCheck";
+        public const string OctopusLine_ColorCustom = "OctopusLineColorCustom";
+        public const string OctopusLine_WidthCheck = "OctopusLineWidthCheck";
+        public const string OctopusLine_WidthSlide = "OctopusLineWidthSlide";
     }
     
     public class MultiCutPreference 
     {
         #region ATTR
         
-        public readonly Color DefaultColor = Colors.LimeGreen;
+        public readonly Color defaultProphetColor = Colors.LimeGreen;
+        public readonly Color defaultOctopusColor = Colors.Blue;
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
         public bool IsSplitChecked { get; set; }
         public bool IsProphetChecked { get; set; }
@@ -39,6 +44,8 @@ namespace MultiCut
         public bool IsIsoChecked { get; set; }
         public bool IsCplChecked { get; set; }
         public bool IsWplChecked { get; set; }
+        public System.Drawing.Color OctopusColor { get; set; }
+        public int OctopusWidth { get; set; }
 
 
         #endregion
@@ -83,14 +90,20 @@ namespace MultiCut
             this.IsProphetChecked = this.LoadBoolSetting(SettingKey.PredictionLine_EnabledCheck, PlugInSettings, true);
             this.IsPriorityChecked = this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
             this.LoadBoolSetting(SettingKey.PredictionLine_ColorCheck, PlugInSettings, false);
-            this.ProphetColor = this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, this.DefaultColor.ToSystemDrawing());
+            this.ProphetColor = this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, 
+                this.defaultProphetColor.ToSystemDrawing());
             this.LoadBoolSetting(SettingKey.PredictionLine_WidthCheck, PlugInSettings, false);
-            this.ProphetWidth = this.LoadIntSetting(SettingKey.PredictionLine_WidthSlide, PlugInSettings, 1);
+            this.ProphetWidth = this.LoadIntSetting(SettingKey.PredictionLine_WidthSlide, PlugInSettings, 2);
             
             this.IsOctopusChecked = this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
             this.IsIsoChecked = this.LoadBoolSetting(SettingKey.OctopusLine_ISOCheck, PlugInSettings, true);
             this.IsCplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_CPLCheck, PlugInSettings, true);
-            this.IsWplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_WLPCheck, PlugInSettings, true);
+            this.IsWplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_WPLCheck, PlugInSettings, true);
+            this.LoadBoolSetting(SettingKey.OctopusLine_ColorCheck, PlugInSettings, false);
+            this.OctopusColor = this.LoadColorSetting(SettingKey.OctopusLine_ColorCustom, PlugInSettings,
+                this.defaultOctopusColor.ToSystemDrawing());
+            this.LoadBoolSetting(SettingKey.OctopusLine_WidthCheck, PlugInSettings, false);
+            this.OctopusWidth = this.LoadIntSetting(SettingKey.OctopusLine_WidthSlide, PlugInSettings, 2);
 
         }
         
@@ -313,7 +326,7 @@ namespace MultiCut
             // Set Default Color of ColorPick
             Color color = isChecked 
                         ? this.McPlugin.Settings.GetColor(SettingKey.PredictionLine_ColorCustom).ToEto() 
-                        : this.DefaultColor;
+                        : this.DefaultProphetColor;
             this.ColorPick.Value = color;
             this.SetMcPrefColor(color);
         }
@@ -328,10 +341,10 @@ namespace MultiCut
         #region ColorPick
         
         private ColorPicker ColorPick { get; set; }
-        private Color DefaultColor => this.McPref.DefaultColor;
+        private Color DefaultProphetColor => this.McPref.defaultProphetColor;
         private void SetColorPick()
         {
-            this.ColorPick = new ColorPicker(){ Value = this.DefaultColor };
+            this.ColorPick = new ColorPicker(){ Value = this.DefaultProphetColor };
             this.ColorPick.Load += OnColorPickLoad;
             this.ColorPick.ValueChanged += OnColorPickChanged;
         }
@@ -344,7 +357,7 @@ namespace MultiCut
         private void OnColorPickChanged(object sender, EventArgs e)
         {
             Color color = this.ColorPick.Value;
-            if (color != this.DefaultColor)
+            if (color != this.DefaultProphetColor)
             {
                 this.McPlugin.Settings.SetColor(SettingKey.PredictionLine_ColorCustom, color.ToSystemDrawing());
                 this.SetMcPrefColor(color);
@@ -531,15 +544,30 @@ namespace MultiCut
             this.WPLCheck = new CheckBox(){ Text = "WPlane Intersection", ThreeState = false };
             this.WPLCheck.Load += (sender, args) =>
             {
-                this.WPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_WLPCheck); // get DB //
+                this.WPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_WPLCheck); // get DB //
             };
             this.WPLCheck.CheckedChanged += (sender, args) =>
             {
                 bool value = MethodBasic.SafeCast(this.WPLCheck.Checked);
-                McPlugin.Settings.SetBool(SettingKey.OctopusLine_WLPCheck, value); // Set DB //
+                McPlugin.Settings.SetBool(SettingKey.OctopusLine_WPLCheck, value); // Set DB //
                 McPref.IsWplChecked = value; // Notify MCT //
             };
         }
+
+        #endregion
+        #region ColorSet
+
+        private Color DefaultOctopusColor => this.McPref.defaultOctopusColor;
+        private ColorPicker ColorPick { get; set; }
+        private void SetColorPick()
+        {
+            this.ColorPick = new ColorPicker() { Value = this.DefaultOctopusColor };
+            this.ColorPick.Load += (sender, args) =>
+            {
+                
+            };
+        }
+
 
         #endregion
         public void SetGroupLayout()
