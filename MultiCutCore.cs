@@ -752,7 +752,7 @@ namespace MultiCut
     internal class GetPointTemplate : GetPoint
     {
         protected Core coreObj;
-        private MultiCutPreference McPref => MultiCutPreference.Instance;
+        protected MultiCutPreference McPref => MultiCutPreference.Instance;
         protected GetPointTemplate(Core coreobjPassed)
         {
             coreObj = coreobjPassed;
@@ -839,7 +839,7 @@ namespace MultiCut
             {
                 foreach (Curve crv in coreObj.OctopusCascade.Keys)
                 {
-                    e.Display.DrawCurve(crv, System.Drawing.Color.Blue, 3);
+                    e.Display.DrawCurve(crv, this.McPref.OctopusColor, 3);
                 }
                 foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascade)
                 {

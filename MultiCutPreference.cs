@@ -481,26 +481,24 @@ namespace MultiCut
         private void SetEnableCheck()
         {
             this.EnableCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
-            this.EnableCheck.Load += this.GetEnableDB;
-            this.EnableCheck.CheckedChanged += SetEnableDB;
-            this.EnableCheck.CheckedChanged += this.NotificateMCT;
+            this.EnableCheck.Load += (sender, args) =>
+            {
+                this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck);
+            };
+            this.EnableCheck.CheckedChanged += (sender, args) =>
+            {
+                McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, MethodBasic.SafeCast(EnableCheck.Checked));
+                McPref.IsOctopusChecked = MethodBasic.SafeCast(EnableCheck.Checked);
+            };
             this.EnableCheck.CheckedChanged += this.EnableSubOptions;
-        }
-        private void GetEnableDB(object sender, EventArgs e)
-        {
-            this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck);
-        }
-        private void SetEnableDB(object sender, EventArgs e)
-        {
-            McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, MethodBasic.SafeCast(EnableCheck.Checked));
-        }
-        private void NotificateMCT(object sender, EventArgs e)
-        {
-            McPref.IsOctopusChecked = MethodBasic.SafeCast(EnableCheck.Checked);
         }
         private void EnableSubOptions(object sender, EventArgs e)
         {
-            
+            bool value = MethodBasic.SafeCast(this.EnableCheck.Checked);
+            this.ISOCheck.Enabled = value;
+            this.WPLCheck.Enabled = value;
+            this.CPLCheck.Enabled = value;
+            this.ColorCheck.Enabled = value;
         }
 
         #endregion
@@ -509,7 +507,7 @@ namespace MultiCut
         private CheckBox ISOCheck { get; set; }
         private void SetIsoCheck()
         {
-            this.ISOCheck = new CheckBox(){ Text = "Isocurve Intersection", ThreeState = false };
+            this.ISOCheck = new CheckBox(){ Text = "Isocurve Intersect", ThreeState = false };
             this.ISOCheck.Load += (sender, args) =>
             {
                 this.ISOCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_ISOCheck); // Get DB //
@@ -525,7 +523,7 @@ namespace MultiCut
         private CheckBox CPLCheck { get; set; }
         private void SetCplChecked()
         {
-           this.CPLCheck = new CheckBox(){ Text = "CPlane Intersection", ThreeState = false };
+           this.CPLCheck = new CheckBox(){ Text = "CPlane Intersect", ThreeState = false };
            this.CPLCheck.Load += (sender, args) =>
            {
                this.CPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_CPLCheck); // get DB //
@@ -541,7 +539,7 @@ namespace MultiCut
         private CheckBox WPLCheck { get; set; }
         private void SetWplChecked()
         {
-            this.WPLCheck = new CheckBox(){ Text = "WPlane Intersection", ThreeState = false };
+            this.WPLCheck = new CheckBox(){ Text = "WPlane Intersect", ThreeState = false };
             this.WPLCheck.Load += (sender, args) =>
             {
                 this.WPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_WPLCheck); // get DB //
@@ -549,13 +547,37 @@ namespace MultiCut
             this.WPLCheck.CheckedChanged += (sender, args) =>
             {
                 bool value = MethodBasic.SafeCast(this.WPLCheck.Checked);
-                McPlugin.Settings.SetBool(SettingKey.OctopusLine_WPLCheck, value); // Set DB //
-                McPref.IsWplChecked = value; // Notify MCT //
+                this.McPlugin.Settings.SetBool(SettingKey.OctopusLine_WPLCheck, value); // Set DB //
+                this.McPref.IsWplChecked = value; // Notify MCT //
             };
         }
 
         #endregion
         #region ColorSet
+
+        private CheckBox ColorCheck { get; set; }
+        private void SetColorCheck()
+        {
+            this.ColorCheck = new CheckBox(){ Text = "Customize Color", ThreeState = false };
+            this.ColorCheck.Load += (sender, args) =>
+            {
+                this.ColorCheck.Checked = this.McPlugin.Settings.GetBool(SettingKey.OctopusLine_ColorCheck); // get DB //
+            };
+            this.ColorCheck.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.ColorCheck.Checked);
+                this.McPlugin.Settings.SetBool(SettingKey.OctopusLine_ColorCheck, value); // set DB //
+               
+                // Control the behavior of ColorPick //
+                bool doubleValue = MethodBasic.DoubleCheck(value, this.EnableCheck.Checked);
+                Color color = value
+                    ? this.McPlugin.Settings.GetColor(SettingKey.OctopusLine_ColorCustom).ToEto() // dispatch Color //
+                    : this.DefaultOctopusColor;
+                this.ColorPick.Enabled = doubleValue;
+                this.ColorPick.Value = color;
+                this.McPref.OctopusColor = color.ToSystemDrawing();
+            };
+        }
 
         private Color DefaultOctopusColor => this.McPref.defaultOctopusColor;
         private ColorPicker ColorPick { get; set; }
@@ -564,7 +586,16 @@ namespace MultiCut
             this.ColorPick = new ColorPicker() { Value = this.DefaultOctopusColor };
             this.ColorPick.Load += (sender, args) =>
             {
-                
+                this.ColorPick.Value = this.McPlugin.Settings.GetColor(SettingKey.OctopusLine_ColorCustom).ToEto();
+            };
+            this.ColorPick.ValueChanged += (sender, args) =>
+            {
+                Color color = this.ColorPick.Value;
+                if (color != this.DefaultOctopusColor)
+                {
+                    this.McPlugin.Settings.SetColor(SettingKey.OctopusLine_ColorCustom,color.ToSystemDrawing());
+                    this.McPref.OctopusColor = color.ToSystemDrawing();
+                }
             };
         }
 
@@ -576,6 +607,8 @@ namespace MultiCut
             this.SetIsoCheck(); 
             this.SetCplChecked();
             this.SetWplChecked();
+            this.SetColorCheck();
+            this.SetColorPick();
             
             this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> predictionControls = new Control[]
@@ -584,8 +617,8 @@ namespace MultiCut
                 this.ISOCheck,
                 this.CPLCheck,
                 this.WPLCheck,
-                //this.WidthCheck,
-                //this.WidthSlide
+                this.ColorCheck,
+                this.ColorPick,
             };
             this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
         }
