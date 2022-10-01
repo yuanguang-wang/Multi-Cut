@@ -601,6 +601,46 @@ namespace MultiCut
 
 
         #endregion
+        #region WidthSet
+        private CheckBox WidthCheck { get; set; }
+        private void SetWidthCheck()
+        {
+            this.WidthCheck = new CheckBox() { Text = "Customize Width", ThreeState = false };
+            this.WidthCheck.Load += (sender, args) =>
+            {
+                this.WidthCheck.Checked = this.McPlugin.Settings.GetBool(SettingKey.OctopusLine_WidthCheck); // get DB //
+            };
+            this.WidthCheck.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.WidthCheck.Checked);
+                this.McPlugin.Settings.SetBool(SettingKey.OctopusLine_WidthCheck, value); // set DB //
+            };
+        }
+        private int DisplayThickness => MethodBasic.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
+        private Slider WidthSlide { get; set; }
+        private void SetWidthSlide()
+        {
+            this.WidthSlide = new Slider()            
+            {
+                MaxValue = 9,
+                MinValue = 1,
+                Value = 3,
+                TickFrequency = 1,
+                SnapToTick = true
+            };
+            this.WidthSlide.Load += (sender, args) =>
+            {
+                this.WidthSlide.Value = this.McPlugin.Settings.GetInteger(SettingKey.OctopusLine_WidthSlide); // get DB //
+            };
+            this.WidthSlide.ValueChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.WidthCheck.Checked);
+                
+            };
+        }
+
+        #endregion
+        
         public void SetGroupLayout()
         {
             this.SetEnableCheck();
@@ -609,6 +649,8 @@ namespace MultiCut
             this.SetWplChecked();
             this.SetColorCheck();
             this.SetColorPick();
+            this.SetWidthCheck();
+            this.SetWidthSlide();
             
             this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> predictionControls = new Control[]
@@ -619,6 +661,8 @@ namespace MultiCut
                 this.WPLCheck,
                 this.ColorCheck,
                 this.ColorPick,
+                this.WidthCheck,
+                this.WidthSlide
             };
             this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
         }

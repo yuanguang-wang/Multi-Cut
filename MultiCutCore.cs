@@ -622,7 +622,7 @@ namespace MultiCut
                 return;
             }
             
-            bool trinityBool = McPref.IsIsoChecked & McPref.IsCplChecked & McPref.IsWplChecked;
+            bool trinityBool = !McPref.IsIsoChecked & !McPref.IsCplChecked & !McPref.IsWplChecked;
             if (!McPref.IsOctopusChecked | trinityBool)
             {
                 this.OctopusCascade = new Dictionary<Curve, string>();
@@ -843,15 +843,15 @@ namespace MultiCut
                 }
                 foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascade)
                 {
-                    e.Display.Draw2dText(element.Value, System.Drawing.Color.Blue, element.Key.PointAtEnd, false, 14);
-                    e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Blue);
+                    e.Display.Draw2dText(element.Value, this.McPref.OctopusColor, element.Key.PointAtEnd, false, 14);
+                    e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, 5, this.McPref.OctopusColor);
                     this.AddConstructionPoint(element.Key.PointAtEnd);
                 }
             }
             
             if (coreObj.OctopusCustom != null)
             {
-                e.Display.DrawCurve(coreObj.OctopusCustom, System.Drawing.Color.Blue, 3);
+                e.Display.DrawCurve(coreObj.OctopusCustom, this.McPref.OctopusColor, 3);
             }
             
             foreach (Curve crv in coreObj.OctopusArmStocker)
