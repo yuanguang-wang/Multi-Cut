@@ -204,7 +204,6 @@ namespace MultiCut
         private List<BrepEdge> LastEdgeFoundList { get; set; }
         private List<int> CurrentFaceFoundIndexList { get; set; }
         private List<int> LastFaceFoundIndexList { get; set; }
-        public bool IsAssistKeyDown { get; set; }
         public Point3d[] AssistPtList { get; private set; }
         private Dictionary<Curve, OctopusType> OctopusRaw { get; set; }
         public Dictionary<Curve, string> OctopusCascade { get; private set; }
@@ -511,6 +510,10 @@ namespace MultiCut
         
         public void AssistPtGenerator()
         {
+            if (!McPref.IsPointEnabled)
+            {
+                return;
+            }
             if (this.CurrentEdgeFoundList.Count == 1)
             {
                 this.CurrentEdgeFoundList[0].DivideByCount(9, true, out Point3d[] cptTemp);
@@ -762,7 +765,6 @@ namespace MultiCut
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
         {
-            coreObj.IsAssistKeyDown = true;
             coreObj.CurrentPt = e.Point;
             
             int isPtOnEdge = coreObj.CurrentEdgeFinder();
@@ -784,15 +786,12 @@ namespace MultiCut
                     e.Display.DrawCurve(crv, this.McPref.ProphetColor, this.McPref.ProphetWidth);
                 }
             }
-
-            if (coreObj.IsAssistKeyDown)
+            
+            coreObj.AssistPtGenerator();
+            if (coreObj.AssistPtList != null)
             {
-                coreObj.AssistPtGenerator();
-                if (coreObj.AssistPtList != null)
-                {
-                    this.AddConstructionPoints(coreObj.AssistPtList);
-                    e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Red);
-                }
+                this.AddConstructionPoints(coreObj.AssistPtList);
+                e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Red);
             }
             else
             {

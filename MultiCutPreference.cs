@@ -13,7 +13,7 @@ namespace MultiCut
     internal static class SettingKey
     {
         public const string General_SplitCheck = "GeneralSplitCheck";
-        public const string PredictionLine_EnabledCheck = "PredictionLineEnabledCheck";
+        public const string PredictionLine_EnableCheck = "PredictionLineEnabledCheck";
         public const string PredictionLine_PriorityCheck = "PredictionLinePriorityCheck";
         public const string PredictionLine_ColorCheck = "PredictionLineColorCheck";
         public const string PredictionLine_ColorCustom = "PredictionLineColorCustom";
@@ -27,6 +27,12 @@ namespace MultiCut
         public const string OctopusLine_ColorCustom = "OctopusLineColorCustom";
         public const string OctopusLine_WidthCheck = "OctopusLineWidthCheck";
         public const string OctopusLine_WidthSlide = "OctopusLineWidthSlide";
+        public const string AssistantPoint_EnableCheck = "AssistantPointEnableCheck";
+        public const string AssistantPoint_PointNumber = "AssistantPointNumber";
+        public const string AssistantPoint_ColorCheck = "AssistantPointColorCheck";
+        public const string AssistantPoint_ColorPick = "AssistantPointColorPick";
+        public const string AssistantPoint_SizeCheck = "AssistantPointSizeCheck";
+        public const string AssistantPoint_SizePick = "AssistantPointSizePick";
     }
     
     public class MultiCutPreference 
@@ -35,6 +41,7 @@ namespace MultiCut
         
         public readonly Color defaultProphetColor = Colors.LimeGreen;
         public readonly Color defaultOctopusColor = Colors.Blue;
+        public readonly Color defaultPointColor = Colors.Brown;
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
         public bool IsSplitChecked { get; set; }
         public bool IsProphetChecked { get; set; }
@@ -47,6 +54,10 @@ namespace MultiCut
         public bool IsWplChecked { get; set; }
         public System.Drawing.Color OctopusColor { get; set; }
         public int OctopusWidth { get; set; }
+        public bool IsPointEnabled { get; set; }
+        public int PointNumber { get; set; }
+        public System.Drawing.Color PointColor { get; set; }
+        public int PointSize { get; set; }
 
 
         #endregion
@@ -88,7 +99,8 @@ namespace MultiCut
         public void LoadSettingBundle()
         {
             this.IsSplitChecked = this.LoadBoolSetting(SettingKey.General_SplitCheck, PlugInSettings, false);
-            this.IsProphetChecked = this.LoadBoolSetting(SettingKey.PredictionLine_EnabledCheck, PlugInSettings, true);
+            
+            this.IsProphetChecked = this.LoadBoolSetting(SettingKey.PredictionLine_EnableCheck, PlugInSettings, true);
             this.IsPriorityChecked = this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
             this.LoadBoolSetting(SettingKey.PredictionLine_ColorCheck, PlugInSettings, false);
             this.ProphetColor = this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, 
@@ -105,7 +117,14 @@ namespace MultiCut
                 this.defaultOctopusColor.ToSystemDrawing());
             this.LoadBoolSetting(SettingKey.OctopusLine_WidthCheck, PlugInSettings, false);
             this.OctopusWidth = this.LoadIntSetting(SettingKey.OctopusLine_WidthSlide, PlugInSettings, 2);
-
+            
+            this.IsPointEnabled = this.LoadBoolSetting(SettingKey.AssistantPoint_EnableCheck, PlugInSettings, false);
+            this.PointNumber = this.LoadIntSetting(SettingKey.AssistantPoint_PointNumber, PlugInSettings, 5);
+            this.LoadBoolSetting(SettingKey.AssistantPoint_ColorCheck, PlugInSettings, false);
+            this.PointColor = this.LoadColorSetting(SettingKey.AssistantPoint_ColorPick, PlugInSettings,
+                this.defaultPointColor.ToSystemDrawing());
+            this.LoadBoolSetting(SettingKey.AssistantPoint_SizeCheck, PlugInSettings, false);
+            this.PointSize = this.LoadIntSetting(SettingKey.AssistantPoint_SizePick, PlugInSettings, 2);
         }
         
         #endregion
@@ -117,6 +136,7 @@ namespace MultiCut
         private AboutBox About => AboutBox.Instance;
         private PredictionLineBox PredictionLine => PredictionLineBox.Instance;
         private OctopusLineBox OctopusLine => OctopusLineBox.Instance;
+        private  AssistantPointBox AssistantPoint => AssistantPointBox.Instance;
         private DynamicLayout PreferenceLayout { get; set; }
         
 
@@ -140,8 +160,8 @@ namespace MultiCut
 
             this.PreferenceLayout.Spacing = new Size(10,10);
             
-            IEnumerable<GroupBox> controls_1 = new GroupBox[] { this.General, this.About, this.OctopusLine};
-            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.PredictionLine };
+            IEnumerable<GroupBox> controls_1 = new GroupBox[] { this.General, this.About, this.OctopusLine };
+            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.AssistantPoint, this.PredictionLine };
             
             this.PreferenceLayout.BeginHorizontal();
             this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, controls_1);
@@ -215,7 +235,9 @@ namespace MultiCut
     {
         public static AboutBox Instance { get; } = new AboutBox();
         private DynamicLayout AboutBoxLayout { get; set; }
-        private LinkButton Link { get; set; }
+        private LinkButton GithubLink { get; set; }
+        private LinkButton WebsiteLink { get; set; }
+
         private AboutBox()
         {
             this.Text = "About";
@@ -227,18 +249,33 @@ namespace MultiCut
         }
         private void SetLinkButton()
         {
-            this.Link = new LinkButton();
-            this.Link.Text = "Documentation on Github";
-            this.Link.Click += (sender, args) =>
+            // Git Link //
+            this.GithubLink = new LinkButton();
+            this.GithubLink.Text = "Documentation on Github";
+            this.GithubLink.Click += (sender, args) =>
             {
                 PythonScript ps = PythonScript.Create();
                 ps.ExecuteScript("import webbrowser; webbrowser.open('https://github.com/yuanguang-wang/Multi-Cut')");
             };
+            
+            // Web Link //
+            this.WebsiteLink = new LinkButton();
+            this.WebsiteLink.Text = "Find more Utilities";
+            this.WebsiteLink.Click += (sender, args) =>
+            {
+                PythonScript ps = PythonScript.Create();
+                ps.ExecuteScript("import webbrowser; webbrowser.open('https://elderaven.com')");
+            }; 
         }
         private void SetGroupLayout()
         {
             this.AboutBoxLayout = new DynamicLayout();
-            this.AboutBoxLayout.AddRow(this.Link);
+            IEnumerable<Control> controls = new Control[]
+            {
+                this.GithubLink,
+                this.WebsiteLink
+            };
+            this.AboutBoxLayout.AddSeparateColumn(AboutBoxLayout.DefaultPadding,13, false, false, controls);
         }
     }
 
@@ -279,7 +316,7 @@ namespace MultiCut
         private void OnEnableCheckLoad(object sender, EventArgs e)
         {
             // get DB //
-            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLine_EnabledCheck);
+            bool isChecked = this.McPlugin.Settings.GetBool(SettingKey.PredictionLine_EnableCheck);
             // set CheckBox //
             this.EnableCheck.Checked = isChecked;
             // set mcp ATTR //
@@ -292,7 +329,7 @@ namespace MultiCut
             // ReSharper disable once PossibleInvalidOperationException //
             bool isChecked = (bool)this.EnableCheck.Checked;
             // set DB //
-            this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_EnabledCheck, isChecked);
+            this.McPlugin.Settings.SetBool(SettingKey.PredictionLine_EnableCheck, isChecked);
             this.McPlugin.SaveSettings();
             //set mcp ATTR //
             this.SetMcPrefProphet(isChecked);
@@ -714,6 +751,114 @@ namespace MultiCut
                 this.WidthSlide
             };
             this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
+        }
+    }
+    
+    public class AssistantPointBox : GroupBox, IGroupCommon
+    {
+        public RhinoDoc CurrentDoc => MethodBasic.CurrentDoc;
+        public MultiCutPreference McPref => MultiCutPreference.Instance;
+        public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        public DynamicLayout GroupBoxLayout { get; set; }
+        public static AssistantPointBox Instance { get; } = new AssistantPointBox();
+        private AssistantPointBox()
+        {
+            this.Text = "Assistant Point";
+            
+            this.SetGroupLayout();
+            this.Content = this.GroupBoxLayout;
+        }
+
+        #region EnableCheck
+        private CheckBox EnableCheck { get; set; }
+        private Color DefaultColor => McPref.defaultPointColor;
+        private void SetEnableCheck()
+        {
+            this.EnableCheck = new CheckBox() { Text = "Enable", ThreeState = false };
+            this.EnableCheck.Load += (sender, args) =>
+            {
+                this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_EnableCheck); // get DB //
+            };
+            this.EnableCheck.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.EnableCheck.Checked);
+                McPref.IsPointEnabled = value;
+                
+                // Enable SusSettings //
+                this.PointNumber.Enabled = value;
+                this.ColorCheck.Enabled = value;
+                this.SizeCheck.Enabled = value;
+                bool colorDoubleCheck = MethodBasic.DoubleCheck(value, this.ColorCheck.Checked);
+                this.ColorPick.Enabled = colorDoubleCheck;
+                McPref.PointColor = colorDoubleCheck ? this.ColorPick.Value.ToSystemDrawing() : this.DefaultColor.ToSystemDrawing();
+            };
+        }
+ 
+
+        #endregion
+        #region PointNumber
+        private DropDown PointNumber { get; set; }
+        private void SetPointNumber()
+        {
+            this.PointNumber = new DropDown(); 
+            IEnumerable<object> PointNumbers = new List<object>() {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+            this.PointNumber.DataStore = PointNumbers;
+        }
+
+        #endregion
+        #region ColorSet
+        private CheckBox ColorCheck { get; set; }
+        private void SetColorCheck()
+        {
+            this.ColorCheck = new CheckBox() { Text = "Customize Color", ThreeState = false };
+        }
+
+        private ColorPicker ColorPick { get; set; }
+        private void SetColorPick()
+        {
+            this.ColorPick = new ColorPicker();
+        }
+
+
+        #endregion
+        #region SizeSet
+        private CheckBox SizeCheck { get; set; }
+        private void SetSizeCheck()
+        {
+            this.SizeCheck = new CheckBox() { Text = "Customize Point Size", ThreeState = false };
+        }
+
+        private Slider SizeSlide { get; set; }
+        private void SetSizeSlide()
+        {
+            this.SizeSlide = new Slider();
+        }
+
+
+        #endregion
+
+        public void SetGroupLayout()
+        {
+            SetEnableCheck();
+            SetPointNumber();
+            SetColorCheck();
+            SetColorPick();
+            SetSizeCheck();
+            SetSizeSlide();
+            
+            this.GroupBoxLayout = new DynamicLayout();
+            IEnumerable<Control> controls = new Control[]
+            {
+                this.EnableCheck,
+                this.PointNumber,
+                this.ColorCheck,
+                this.ColorPick,
+                this.SizeCheck,
+                this.SizeSlide
+            };
+            
+            this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
+
         }
     }
 
