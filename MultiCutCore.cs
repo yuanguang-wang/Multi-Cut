@@ -839,7 +839,7 @@ namespace MultiCut
             {
                 foreach (Curve crv in coreObj.OctopusCascade.Keys)
                 {
-                    e.Display.DrawCurve(crv, this.McPref.OctopusColor, 3);
+                    e.Display.DrawCurve(crv, this.McPref.OctopusColor, this.McPref.OctopusWidth);
                 }
                 foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascade)
                 {
@@ -851,12 +851,12 @@ namespace MultiCut
             
             if (coreObj.OctopusCustom != null)
             {
-                e.Display.DrawCurve(coreObj.OctopusCustom, this.McPref.OctopusColor, 3);
+                e.Display.DrawCurve(coreObj.OctopusCustom, this.McPref.OctopusColor,  this.McPref.OctopusWidth);
             }
             
             foreach (Curve crv in coreObj.OctopusArmStocker)
             {
-                e.Display.DrawCurve(crv, System.Drawing.Color.CornflowerBlue, 3);
+                e.Display.DrawCurve(crv, System.Drawing.Color.CornflowerBlue,  this.McPref.OctopusWidth);
             }
 
             base.OnDynamicDraw(e);

@@ -6,6 +6,7 @@ using Eto.Forms;
 
 using Rhino.UI;
 using Rhino;
+using Rhino.Runtime;
 
 namespace MultiCut
 {
@@ -113,6 +114,7 @@ namespace MultiCut
     public class PreferenceForm : Form
     {
         private GeneralBox General => GeneralBox.Instance;
+        private AboutBox About => AboutBox.Instance;
         private PredictionLineBox PredictionLine => PredictionLineBox.Instance;
         private OctopusLineBox OctopusLine => OctopusLineBox.Instance;
         private DynamicLayout PreferenceLayout { get; set; }
@@ -137,8 +139,14 @@ namespace MultiCut
             this.PreferenceLayout = new DynamicLayout();
 
             this.PreferenceLayout.Spacing = new Size(10,10);
-            IEnumerable<GroupBox> controls = new GroupBox[] { this.General, this.PredictionLine, this.OctopusLine};
-            this.PreferenceLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
+            
+            IEnumerable<GroupBox> controls_1 = new GroupBox[] { this.General, this.About, this.OctopusLine};
+            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.PredictionLine };
+            
+            this.PreferenceLayout.BeginHorizontal();
+            this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, controls_1);
+            this.PreferenceLayout.AddSeparateColumn(new Padding(5,10,10,10), 10, false, false, controls_2);
+            this.PreferenceLayout.EndHorizontal();
 
         }
         
@@ -201,6 +209,37 @@ namespace MultiCut
             this.GroupBoxLayout.AddRow(this.SplitCheck);
         }
 
+    }
+
+    public class AboutBox : GroupBox
+    {
+        public static AboutBox Instance { get; } = new AboutBox();
+        private DynamicLayout AboutBoxLayout { get; set; }
+        private LinkButton Link { get; set; }
+        private AboutBox()
+        {
+            this.Text = "About";
+            this.Padding = new Padding(10);
+
+            this.SetLinkButton();
+            this.SetGroupLayout();
+            this.Content = this.AboutBoxLayout;
+        }
+        private void SetLinkButton()
+        {
+            this.Link = new LinkButton();
+            this.Link.Text = "Documentation on Github";
+            this.Link.Click += (sender, args) =>
+            {
+                PythonScript ps = PythonScript.Create();
+                ps.ExecuteScript("import webbrowser; webbrowser.open('https://github.com/yuanguang-wang/Multi-Cut')");
+            };
+        }
+        private void SetGroupLayout()
+        {
+            this.AboutBoxLayout = new DynamicLayout();
+            this.AboutBoxLayout.AddRow(this.Link);
+        }
     }
 
     public class PredictionLineBox : GroupBox, IGroupCommon
@@ -483,12 +522,12 @@ namespace MultiCut
             this.EnableCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
             this.EnableCheck.Load += (sender, args) =>
             {
-                this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck);
+                this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck); // get DB //
             };
             this.EnableCheck.CheckedChanged += (sender, args) =>
             {
-                McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, MethodBasic.SafeCast(EnableCheck.Checked));
-                McPref.IsOctopusChecked = MethodBasic.SafeCast(EnableCheck.Checked);
+                McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, MethodBasic.SafeCast(EnableCheck.Checked)); // set DB //
+                McPref.IsOctopusChecked = MethodBasic.SafeCast(EnableCheck.Checked); // Notify MCT //
             };
             this.EnableCheck.CheckedChanged += this.EnableSubOptions;
         }
@@ -499,6 +538,11 @@ namespace MultiCut
             this.WPLCheck.Enabled = value;
             this.CPLCheck.Enabled = value;
             this.ColorCheck.Enabled = value;
+            this.WidthCheck.Enabled = value;
+            bool isColorPickEnabled = MethodBasic.DoubleCheck(value, this.ColorCheck.Checked);
+            this.ColorPick.Enabled = isColorPickEnabled;
+            bool isWidthSlideEnabled = MethodBasic.DoubleCheck(value, this.WidthCheck.Checked);
+            this.WidthSlide.Enabled = isWidthSlideEnabled;
         }
 
         #endregion
@@ -605,7 +649,7 @@ namespace MultiCut
         private CheckBox WidthCheck { get; set; }
         private void SetWidthCheck()
         {
-            this.WidthCheck = new CheckBox() { Text = "Customize Width", ThreeState = false };
+            this.WidthCheck = new CheckBox() { Text = "Customize LineWidth", ThreeState = false };
             this.WidthCheck.Load += (sender, args) =>
             {
                 this.WidthCheck.Checked = this.McPlugin.Settings.GetBool(SettingKey.OctopusLine_WidthCheck); // get DB //
@@ -614,6 +658,11 @@ namespace MultiCut
             {
                 bool value = MethodBasic.SafeCast(this.WidthCheck.Checked);
                 this.McPlugin.Settings.SetBool(SettingKey.OctopusLine_WidthCheck, value); // set DB //
+                
+                // Control Behavior //
+                bool doubleCheck = MethodBasic.DoubleCheck(value, this.EnableCheck.Checked);
+                this.WidthSlide.Enabled = doubleCheck;
+                this.McPref.OctopusWidth = doubleCheck ? this.WidthSlide.Value : this.DisplayThickness;
             };
         }
         private int DisplayThickness => MethodBasic.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
@@ -634,8 +683,8 @@ namespace MultiCut
             };
             this.WidthSlide.ValueChanged += (sender, args) =>
             {
-                bool value = MethodBasic.SafeCast(this.WidthCheck.Checked);
-                
+                this.McPlugin.Settings.SetInteger(SettingKey.OctopusLine_WidthSlide, this.WidthSlide.Value); // set DB //
+                this.McPref.OctopusWidth = this.WidthSlide.Value; // Notify MCT //
             };
         }
 
