@@ -119,7 +119,7 @@ namespace MultiCut
             this.OctopusWidth = this.LoadIntSetting(SettingKey.OctopusLine_WidthSlide, PlugInSettings, 2);
             
             this.IsPointEnabled = this.LoadBoolSetting(SettingKey.AssistantPoint_EnableCheck, PlugInSettings, false);
-            this.PointNumber = this.LoadIntSetting(SettingKey.AssistantPoint_PointNumber, PlugInSettings, 5);
+            this.PointNumber = this.LoadIntSetting(SettingKey.AssistantPoint_PointNumber, PlugInSettings, 3);
             this.LoadBoolSetting(SettingKey.AssistantPoint_ColorCheck, PlugInSettings, false);
             this.PointColor = this.LoadColorSetting(SettingKey.AssistantPoint_ColorPick, PlugInSettings,
                 this.defaultPointColor.ToSystemDrawing());
@@ -777,23 +777,28 @@ namespace MultiCut
             this.EnableCheck = new CheckBox() { Text = "Enable", ThreeState = false };
             this.EnableCheck.Load += (sender, args) =>
             {
-                this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_EnableCheck); // get DB //
+                bool value = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_EnableCheck); // get DB //
+                this.EnableCheck.Checked = value;
+                this.EnableSubSetting(value);
+                this.SetColorDoubleCheck();
             };
+            
             this.EnableCheck.CheckedChanged += (sender, args) =>
             {
                 bool value = MethodBasic.SafeCast(this.EnableCheck.Checked);
-                McPref.IsPointEnabled = value;
-                
-                // Enable SusSettings //
-                this.PointNumber.Enabled = value;
-                this.ColorCheck.Enabled = value;
-                this.SizeCheck.Enabled = value;
-                bool colorDoubleCheck = MethodBasic.DoubleCheck(value, this.ColorCheck.Checked);
-                this.ColorPick.Enabled = colorDoubleCheck;
-                McPref.PointColor = colorDoubleCheck ? this.ColorPick.Value.ToSystemDrawing() : this.DefaultColor.ToSystemDrawing();
+                McPref.IsPointEnabled = value; // Notify MCT//
+                McPlugin.Settings.SetBool(SettingKey.AssistantPoint_EnableCheck, value); // set DB //
+                this.EnableSubSetting(value);
+                this.SetColorDoubleCheck();
             };
         }
- 
+        private void EnableSubSetting(bool value)
+        {
+            // Enable SusSettings //
+            this.PointNumber.Enabled = value;
+            this.ColorCheck.Enabled = value;
+            this.SizeCheck.Enabled = value;
+        }
 
         #endregion
         #region PointNumber
@@ -803,6 +808,17 @@ namespace MultiCut
             this.PointNumber = new DropDown(); 
             IEnumerable<object> PointNumbers = new List<object>() {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
             this.PointNumber.DataStore = PointNumbers;
+
+            this.PointNumber.Load += (sender, args) =>
+            {
+                this.PointNumber.SelectedIndex = McPlugin.Settings.GetInteger(SettingKey.AssistantPoint_PointNumber); // get DB //
+            };
+            this.PointNumber.SelectedIndexChanged += (sender, args) =>
+            {
+                int selectedIndex = this.PointNumber.SelectedIndex;
+                McPlugin.Settings.SetInteger(SettingKey.AssistantPoint_PointNumber, selectedIndex); // set DB //
+                McPref.PointNumber = selectedIndex + 2; // notify MCT //
+            };
         }
 
         #endregion
@@ -811,12 +827,44 @@ namespace MultiCut
         private void SetColorCheck()
         {
             this.ColorCheck = new CheckBox() { Text = "Customize Color", ThreeState = false };
+            this.ColorCheck.Load += (sender, args) =>
+            {
+                this.ColorCheck.Checked = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_ColorCheck); // get DB //
+                this.SetColorDoubleCheck();
+            };
+            this.ColorCheck.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.ColorCheck.Checked);
+                McPlugin.Settings.SetBool(SettingKey.AssistantPoint_ColorCheck, value); // set DB //
+                this.SetColorDoubleCheck();
+            };
+        }
+        private void SetColorDoubleCheck()
+        {
+            bool doubleCheck = MethodBasic.DoubleCheck(this.ColorCheck.Checked, this.EnableCheck.Checked);
+            this.ColorPick.Enabled = doubleCheck;
+            this.ColorPick.Value = MethodBasic.SafeCast(this.ColorCheck.Checked)
+                ? McPlugin.Settings.GetColor(SettingKey.AssistantPoint_ColorPick).ToEto()
+                : this.DefaultColor;
+            McPref.PointColor = doubleCheck ? this.ColorPick.Value.ToSystemDrawing() : this.DefaultColor.ToSystemDrawing();
         }
 
         private ColorPicker ColorPick { get; set; }
         private void SetColorPick()
         {
-            this.ColorPick = new ColorPicker();
+            this.ColorPick = new ColorPicker(){Value = this.DefaultColor};
+            this.ColorPick.Load += (sender, args) =>
+            {
+                this.ColorPick.Value = McPlugin.Settings.GetColor(SettingKey.AssistantPoint_ColorPick).ToEto(); // get DB //
+            };
+            this.ColorPick.ValueChanged += (sender, args) =>
+            {
+                McPref.PointColor = this.ColorPick.Value.ToSystemDrawing(); // Notify MCT //
+                if (this.ColorPick.Value != this.DefaultColor)
+                {
+                    McPlugin.Settings.SetColor(SettingKey.AssistantPoint_ColorPick, this.ColorPick.Value.ToSystemDrawing()); // set DB conditional //
+                }
+            };
         }
 
 
@@ -826,12 +874,55 @@ namespace MultiCut
         private void SetSizeCheck()
         {
             this.SizeCheck = new CheckBox() { Text = "Customize Point Size", ThreeState = false };
+            this.SizeCheck.Load += (sender, args) =>
+            {
+                this.SizeCheck.Checked = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_SizeCheck); // get DB //
+                SetSizeDoubleCheck();
+            };
+            this.SizeCheck.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.SizeCheck.Checked);
+                McPlugin.Settings.SetBool(SettingKey.AssistantPoint_SizeCheck, value); // set DB //
+                SetSizeDoubleCheck();
+            };
+        }
+        private void SetSizeDoubleCheck()
+        {
+            bool upperValue = MethodBasic.SafeCast(this.EnableCheck.Checked);
+            bool localvalue = MethodBasic.SafeCast(this.SizeCheck.Checked);
+            bool doubleCheck = upperValue & localvalue;
+            this.SizeSlide.Enabled = doubleCheck;
+            this.SizeSlide.Value = localvalue
+                ? McPlugin.Settings.GetInteger(SettingKey.AssistantPoint_SizePick)
+                : this.DisplayPtRadius;
+            McPref.PointSize = doubleCheck ? this.SizeSlide.Value : this.DisplayPtRadius;
+
         }
 
+        private int DisplayPtRadius => (int) MethodBasic.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.PointRadius;
         private Slider SizeSlide { get; set; }
         private void SetSizeSlide()
         {
-            this.SizeSlide = new Slider();
+            this.SizeSlide = new Slider()            
+            {
+                MaxValue = 9,
+                MinValue = 1,
+                Value = 3,
+                TickFrequency = 1,
+                SnapToTick = true
+            };
+            this.SizeSlide.Load += (sender, args) =>
+            {
+                this.SizeSlide.Value = McPlugin.Settings.GetInteger(SettingKey.AssistantPoint_SizePick); // get DB //
+            };
+            this.SizeSlide.ValueChanged += (sender, args) =>
+            {
+                McPref.PointSize = this.SizeSlide.Value;
+                if (this.SizeSlide.Value != this.DisplayPtRadius)
+                {
+                    McPlugin.Settings.SetInteger(SettingKey.AssistantPoint_SizePick, this.SizeSlide.Value);
+                }
+            };
         }
 
 

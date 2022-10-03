@@ -516,7 +516,7 @@ namespace MultiCut
             }
             if (this.CurrentEdgeFoundList.Count == 1)
             {
-                this.CurrentEdgeFoundList[0].DivideByCount(9, true, out Point3d[] cptTemp);
+                this.CurrentEdgeFoundList[0].DivideByCount(McPref.PointNumber, true, out Point3d[] cptTemp);
                 this.AssistPtList = cptTemp;
             }
         }
@@ -791,14 +791,14 @@ namespace MultiCut
             if (coreObj.AssistPtList != null)
             {
                 this.AddConstructionPoints(coreObj.AssistPtList);
-                e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Red);
+                e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, McPref.PointColor);
             }
             else
             {
                 this.ClearConstructionPoints();
             }
             
-            e.Display.DrawPoint(coreObj.CurrentPt, Rhino.Display.PointStyle.RoundControlPoint, 5, System.Drawing.Color.Black);
+            e.Display.DrawPoint(coreObj.CurrentPt, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, System.Drawing.Color.Black);
             
             base.OnDynamicDraw(e);
         }
@@ -842,8 +842,8 @@ namespace MultiCut
                 }
                 foreach (KeyValuePair<Curve, string> element in coreObj.OctopusCascade)
                 {
-                    e.Display.Draw2dText(element.Value, this.McPref.OctopusColor, element.Key.PointAtEnd, false, 14);
-                    e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, 5, this.McPref.OctopusColor);
+                    e.Display.Draw2dText(element.Value, this.McPref.OctopusColor, element.Key.PointAtEnd, false, 16);
+                    e.Display.DrawPoint(element.Key.PointAtEnd, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, this.McPref.OctopusColor);
                     this.AddConstructionPoint(element.Key.PointAtEnd);
                 }
             }
