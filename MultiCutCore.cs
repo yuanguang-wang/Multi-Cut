@@ -510,7 +510,7 @@ namespace MultiCut
         
         public void AssistPtGenerator()
         {
-            if (!McPref.IsPointEnabled)
+            if (!AssistantPointBox.Instance.PtEnableCheck.MCTEnable)
             {
                 return;
             }
@@ -791,7 +791,7 @@ namespace MultiCut
             if (coreObj.AssistPtList != null)
             {
                 this.AddConstructionPoints(coreObj.AssistPtList);
-                e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, McPref.PointColor);
+                e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, AssistantPointBox.Instance.PtEnableCheck.MCTSize, McPref.PointColor);
             }
             else
             {

@@ -928,6 +928,8 @@ namespace MultiCut
 
         #endregion
 
+        public EnableCheckBox PtEnableCheck { get; set; }
+
         public void SetGroupLayout()
         {
             SetEnableCheck();
@@ -936,11 +938,33 @@ namespace MultiCut
             SetColorPick();
             SetSizeCheck();
             SetSizeSlide();
+
+            Control[] controlArray = { this.PointNumber };
+
+            this.PtEnableCheck = new EnableCheckBox(
+                SettingKey.AssistantPoint_EnableCheck,
+                McPlugin.Settings.GetBool,
+                SettingKey.AssistantPoint_ColorPick,
+                McPlugin.Settings.GetColor,
+                SettingKey.AssistantPoint_SizePick,
+                McPlugin.Settings.GetInteger,
+                McPlugin.Settings.SetBool,
+                controlArray,
+                ColorCheck,
+                ColorPick,
+                SizeCheck,
+                SizeSlide,
+                this.DefaultColor,
+                this.DisplayPtRadius
+            );
+            McPref.IsPointEnabled = PtEnableCheck.MCTEnable;
+            McPref.PointColor = PtEnableCheck.MCTColor;
+            McPref.PointNumber = PtEnableCheck.MCTSize;
             
             this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> controls = new Control[]
             {
-                this.EnableCheck,
+                PtEnableCheck,
                 this.PointNumber,
                 this.ColorCheck,
                 this.ColorPick,
@@ -953,6 +977,174 @@ namespace MultiCut
         }
     }
 
+    public class EnableCheckBox : CheckBox
+    {
+        private string SettingKey { get; }
+        private GetDBBool GetDBBoolValue { get; }
+        private string ColorSettingKey { get; }
+        private GetDBColor GetDBColorValue { get; }
+        private string SizeSettingKey { get; }
+        private GetDBInt GetDBIntValue { get; }
+        private SetDBBool SetDBBoolValue { get; }
+        private Control[] ControlArray { get; }
+        private CheckBox ColorCheck { get; }
+        private ColorPicker ColorPick { get; }
+        private CheckBox SizeCheck { get; }
+        private Slider SizeSlide { get; }
+        public bool MCTEnable { get; private set; }
+        private Color DefaultColor { get; }
+        public System.Drawing.Color MCTColor { get; private set; }
+        private int DefaultSize { get; }
+        public int MCTSize { get; private set; }
+
+        public EnableCheckBox(string settingKey, 
+                              GetDBBool getDB,
+                              string colorSettingKey,
+                              GetDBColor getColor,
+                              string sizeSettingKey,
+                              GetDBInt getInt,
+                              SetDBBool setDB, 
+                              Control[] controls, 
+                              CheckBox colorCheck,
+                              ColorPicker colorpicker, 
+                              CheckBox sizeCheck,
+                              Slider slider,
+                              Color defaultColor,
+                              int defaultSize)
+        {
+            this.SettingKey = settingKey;
+            this.GetDBBoolValue = getDB;
+            this.SetDBBoolValue = setDB;
+            this.ColorSettingKey = colorSettingKey;
+            this.GetDBColorValue = getColor;
+            this.SizeSettingKey = sizeSettingKey;
+            this.GetDBIntValue = getInt;
+            this.ControlArray = controls;
+            this.ColorCheck = colorCheck;
+            this.ColorPick = colorpicker;
+            this.SizeCheck = sizeCheck; 
+            this.SizeSlide = slider;
+            this.DefaultColor = defaultColor;
+            this.DefaultSize = defaultSize;
+
+            this.ThreeState = false;
+            // ReSharper disable once VirtualMemberCallInConstructor
+            this.Text = "Enable";
+            
+            this.Load += (sender, args) =>
+            {
+                this.Checked = GetDBBoolValue(this.SettingKey); // get DB //
+                this.EnableSubSetting();
+            };
+
+            this.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.Checked);
+                this.SetDBBoolValue(this.SettingKey, value); // set DB //
+                this.MCTEnable = value; // Notify MCT //
+                this.EnableSubSetting();
+            };
+
+        }
+        private void EnableSubSetting()
+        {
+            bool value = MethodBasic.SafeCast(this.Checked);
+            if (this.ControlArray != null)
+            {
+                foreach (Control control in ControlArray)
+                {
+                    control.Enabled = value;
+                } 
+            }
+            
+            this.ColorCheck.Enabled = value;
+            bool colorCheck = MethodBasic.SafeCast(this.ColorCheck.Checked);
+            bool colorDoubleCheck = value & colorCheck;
+            this.ColorPick.Enabled = colorDoubleCheck;
+            this.ColorPick.Value = colorCheck ? this.GetDBColorValue(this.ColorSettingKey).ToEto() : this.DefaultColor;
+            this.MCTColor = colorDoubleCheck ? this.GetDBColorValue(this.ColorSettingKey) : this.DefaultColor.ToSystemDrawing();
+
+            this.SizeCheck.Enabled = value;
+            bool sizeCheck = MethodBasic.SafeCast(this.SizeCheck.Checked);
+            bool sizeDoubleCheck = value & sizeCheck;
+            this.SizeSlide.Enabled = sizeDoubleCheck;
+            this.SizeSlide.Value = sizeCheck ? this.GetDBIntValue(this.SizeSettingKey) : this.DefaultSize;
+            this.MCTSize = sizeDoubleCheck ? this.GetDBIntValue(this.SizeSettingKey) : this.DefaultSize;
+
+        }
+    }
+
+    public class CommonCheckBox : CheckBox
+    {
+        private string SettingKey { get; }
+        private GetDBBool GetDBBoolValue { get; }
+        private SetDBBool SetDBBoolValue { get; }
+        public bool MCTChecked { get; private set; }
+
+        public CommonCheckBox(
+            string settingKey,
+            GetDBBool getDbBool,
+            SetDBBool setDbBool
+        )
+        {
+            this.SettingKey = settingKey;
+            this.GetDBBoolValue = getDbBool;
+            this.SetDBBoolValue = setDbBool;
+            this.ThreeState = false;
+
+            this.Load += (sender, args) =>
+            {
+                this.Checked = this.GetDBBoolValue(this.SettingKey); // get DB //
+            };
+            this.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.Checked);
+                this.SetDBBoolValue(this.SettingKey, value); // set DB //
+                this.MCTChecked = value; // Notify MCT //
+            };
+        }
+    }
+
+    public class CommonColorPicker : ColorPicker
+    {
+        private string SettingKey { get; }
+        private GetDBColor GetDBColorValue { get; }
+        private SetDBColor SetDBColorValue { get; }
+        private Color DefaultColor { get;  }
+        public System.Drawing.Color MCTColor { get; private set; }
+
+        public CommonColorPicker(
+            string settingKey,
+            GetDBColor getDbColor,
+            SetDBColor setDbColor,
+            Color defaultColor
+            )
+        {
+            this.SettingKey = settingKey;
+            this.GetDBColorValue = getDbColor;
+            this.SetDBColorValue = setDbColor;
+            this.DefaultColor = defaultColor;
+
+            this.Load += (sender, args) =>
+            {
+                this.Value = this.GetDBColorValue(this.SettingKey).ToEto(); // get DB //
+            };
+            this.ValueChanged += (sender, args) =>
+            {
+                this.MCTColor = this.Value.ToSystemDrawing(); // Notify MCT //
+                if (this.Value != this.DefaultColor)
+                {
+                    this.SetDBColorValue(this.SettingKey, this.Value.ToSystemDrawing()); // set DB //
+                }
+            };
+        }
+    }
+
+    public class CommonSlider : Slider
+    {
+        
+    }
+
     public interface IGroupCommon
     {
         RhinoDoc CurrentDoc { get; }
@@ -962,4 +1154,10 @@ namespace MultiCut
         void SetGroupLayout();
     }
 
-}
+    public delegate bool GetDBBool (string SettingKey);
+    public delegate void SetDBBool (string SettingKey, bool value);
+    public delegate int GetDBInt(string SettingKey);
+    public delegate void SetDBInt(string SettingKey, int value);
+    public delegate System.Drawing.Color GetDBColor(string SettingKey);
+    public delegate void SetDBColor(string SettingKey, System.Drawing.Color value);
+}   
