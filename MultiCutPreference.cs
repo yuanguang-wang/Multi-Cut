@@ -928,7 +928,9 @@ namespace MultiCut
 
         #endregion
 
-        public EnableCheckBox PtEnableCheck { get; set; }
+        public EnableCheckBox PtEnableCheck { get; private set; }
+        public ColorCheckBox PtColorCheck { get; private set; }
+        public CommonColorPicker PtColorPick { get; private set; }
 
         public void SetGroupLayout()
         {
@@ -957,17 +959,33 @@ namespace MultiCut
                 this.DefaultColor,
                 this.DisplayPtRadius
             );
-            McPref.IsPointEnabled = PtEnableCheck.MCTEnable;
-            McPref.PointColor = PtEnableCheck.MCTColor;
-            McPref.PointNumber = PtEnableCheck.MCTSize;
-            
+
+            this.PtColorCheck = new ColorCheckBox(
+                SettingKey.AssistantPoint_ColorCheck,
+                McPlugin.Settings.GetBool,
+                McPlugin.Settings.SetBool,
+                this.PtEnableCheck,
+                this.ColorPick,
+                SettingKey.AssistantPoint_ColorPick,
+                McPlugin.Settings.GetColor,
+                this.DefaultColor
+                );
+
+            this.PtColorPick = new CommonColorPicker(
+                SettingKey.AssistantPoint_ColorPick,
+                McPlugin.Settings.GetColor,
+                McPlugin.Settings.SetColor,
+                this.DefaultColor,
+                McPref.PointColor
+            );
+
             this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> controls = new Control[]
             {
-                PtEnableCheck,
+                this.PtEnableCheck,
                 this.PointNumber,
-                this.ColorCheck,
-                this.ColorPick,
+                this.PtColorCheck,
+                this.PtColorPick,
                 this.SizeCheck,
                 this.SizeSlide
             };
@@ -1105,25 +1123,90 @@ namespace MultiCut
         }
     }
 
+    public class ColorCheckBox : CheckBox
+    {
+        public new string Text = "Customize Color";
+        private string SettingKey { get; }
+        private GetDBBool GetDBBoolValue { get; }
+        private SetDBBool SetDBBoolValue { get; }
+        private CheckBox UpperCheck { get; }
+        private ColorPicker ColorPick { get; }
+        private string ColorSettingKey { get; }
+        private GetDBColor GetDBColorValue { get; }
+        private Color DefaultColor { get; }
+        public System.Drawing.Color MCTColor { get; set; }
+
+        public ColorCheckBox(
+            string settingKey,
+            GetDBBool getDbBool,
+            SetDBBool setDbBool,
+            CheckBox upperCheck,
+            ColorPicker colorPick,
+            string colorSettingKey,
+            GetDBColor getDbColor,
+            Color defaultColor
+            )
+        {
+            this.SettingKey = settingKey;
+            this.GetDBBoolValue = getDbBool;
+            this.SetDBBoolValue = setDbBool;
+            this.UpperCheck = upperCheck;
+            this.ColorPick = colorPick;
+            this.ColorSettingKey = colorSettingKey;
+            this.GetDBColorValue = getDbColor;
+            this.DefaultColor = defaultColor;
+
+            this.ThreeState = false;
+
+            this.Load += (sender, args) =>
+            {
+                this.Checked = this.GetDBBoolValue(this.SettingKey); // get DB //
+                this.EnableSubSetting();
+            };
+            this.CheckedChanged += (sender, args) =>
+            {
+                bool value = MethodBasic.SafeCast(this.Checked);
+                this.SetDBBoolValue(this.SettingKey, value); // set DB //
+                this.EnableSubSetting();
+            };
+        }
+
+        private void EnableSubSetting()
+        {
+            bool upperCheck = MethodBasic.SafeCast(this.UpperCheck.Checked);
+            bool localCheck = MethodBasic.SafeCast(this.Checked);
+            bool doubleCheck = upperCheck & localCheck;
+
+            this.ColorPick.Enabled = doubleCheck;
+            this.ColorPick.Value = localCheck ? this.GetDBColorValue(this.ColorSettingKey).ToEto() : this.DefaultColor;
+            this.MCTColor = doubleCheck
+                ? this.GetDBColorValue(this.ColorSettingKey)
+                : this.DefaultColor.ToSystemDrawing();
+        }
+
+    }
+
     public class CommonColorPicker : ColorPicker
     {
-        private string SettingKey { get; }
-        private GetDBColor GetDBColorValue { get; }
-        private SetDBColor SetDBColorValue { get; }
-        private Color DefaultColor { get;  }
-        public System.Drawing.Color MCTColor { get; private set; }
+        protected string SettingKey { get; }
+        protected GetDBColor GetDBColorValue { get; }
+        protected SetDBColor SetDBColorValue { get; }
+        protected Color DefaultColor { get; }
+        protected System.Drawing.Color MCTColor { get; private set; }
 
         public CommonColorPicker(
             string settingKey,
             GetDBColor getDbColor,
             SetDBColor setDbColor,
-            Color defaultColor
+            Color defaultColor,
+            System.Drawing.Color mctColor
             )
         {
             this.SettingKey = settingKey;
             this.GetDBColorValue = getDbColor;
             this.SetDBColorValue = setDbColor;
             this.DefaultColor = defaultColor;
+            this.MCTColor = mctColor;
 
             this.Load += (sender, args) =>
             {
@@ -1137,6 +1220,13 @@ namespace MultiCut
                     this.SetDBColorValue(this.SettingKey, this.Value.ToSystemDrawing()); // set DB //
                 }
             };
+        }
+    }
+
+    public class APColorPicker : CommonColorPicker
+    {
+        public APColorPicker(string settingKey, GetDBColor getDbColor, SetDBColor setDbColor, Color defaultColor, System.Drawing.Color mctColor) : base(settingKey, getDbColor, setDbColor, defaultColor, mctColor)
+        {
         }
     }
 
