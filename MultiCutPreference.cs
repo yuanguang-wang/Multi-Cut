@@ -42,6 +42,8 @@ namespace MultiCut
         public readonly Color defaultProphetColor = Colors.LimeGreen;
         public readonly Color defaultOctopusColor = Colors.Blue;
         public readonly Color defaultPointColor = Colors.Brown;
+        public int defaultPointSize => (int) MethodBasic.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.PointRadius;
+        public int defaultLineWidth => MethodBasic.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
         public bool IsSplitChecked { get; set; }
         public bool IsProphetChecked { get; set; }
@@ -136,7 +138,7 @@ namespace MultiCut
         private AboutBox About => AboutBox.Instance;
         private PredictionLineBox PredictionLine => PredictionLineBox.Instance;
         private OctopusLineBox OctopusLine => OctopusLineBox.Instance;
-        private  AssistantPointBox AssistantPoint => AssistantPointBox.Instance;
+        private AssistantPointBox AssistantPoint => AssistantPointBox.Instance;
         private DynamicLayout PreferenceLayout { get; set; }
         
 
@@ -894,12 +896,11 @@ namespace MultiCut
             this.SizeSlide.Enabled = doubleCheck;
             this.SizeSlide.Value = localvalue
                 ? McPlugin.Settings.GetInteger(SettingKey.AssistantPoint_SizePick)
-                : this.DisplayPtRadius;
-            McPref.PointSize = doubleCheck ? this.SizeSlide.Value : this.DisplayPtRadius;
+                : McPref.defaultLineWidth;
+            McPref.PointSize = doubleCheck ? this.SizeSlide.Value : McPref.defaultLineWidth;
 
         }
 
-        private int DisplayPtRadius => (int) MethodBasic.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.PointRadius;
         private Slider SizeSlide { get; set; }
         private void SetSizeSlide()
         {
@@ -918,7 +919,7 @@ namespace MultiCut
             this.SizeSlide.ValueChanged += (sender, args) =>
             {
                 McPref.PointSize = this.SizeSlide.Value;
-                if (this.SizeSlide.Value != this.DisplayPtRadius)
+                if (this.SizeSlide.Value != McPref.defaultLineWidth)
                 {
                     McPlugin.Settings.SetInteger(SettingKey.AssistantPoint_SizePick, this.SizeSlide.Value);
                 }
@@ -928,8 +929,8 @@ namespace MultiCut
 
         #endregion
 
-        public EnableCheckBox PtEnableCheck { get; private set; }
-        private ColorCheckBox PtColorCheck { get; set; }
+        private EnableCheckBox PtEnableCheck { get; set; }
+        private APColorCheck PtColorCheck { get; set; }
         private APColorPicker PtColorPick { get; set; }
 
         public void SetGroupLayout()
@@ -943,8 +944,7 @@ namespace MultiCut
 
             Control[] controlArray = { this.PointNumber };
 
-            this.PtEnableCheck = new EnableCheckBox();
-
+            this.PtEnableCheck = APEnableCheck.Instance;
             this.PtColorCheck = APColorCheck.Instance;
             this.PtColorPick = APColorPicker.Instance;
 
@@ -964,42 +964,30 @@ namespace MultiCut
         }
     }
 
-    public class EnableCheckBox : CheckBox
+    public abstract class EnableCheckBox : CheckBox
     {
-        protected string Key { get; }
-        protected string ColorKey { get; }
-        protected string SizeKey { get; }
-        protected Control[] ControlArray { get; }
-        protected CheckBox ColorCheck { get; }
-        protected ColorPicker ColorPick { get; }
-        protected CheckBox SizeCheck { get; }
-        protected Slider SizeSlide { get; }
-        protected Color DefaultColor { get; }
-        protected int DefaultSize { get; }
-        protected MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        public sealed override string Text => "Enable";
+        protected abstract string Key { get; }
+        protected abstract string ColorKey { get; }
+        protected abstract string SizeKey { get; }
+        protected abstract Control[] ControlArray { get; }
+        protected abstract CheckBox ColorCheck { get; }
+        protected abstract ColorPicker ColorPick { get; }
+        protected abstract CheckBox SizeCheck { get; }
+        protected abstract Slider SizeSlide { get; }
+        protected abstract Color DefaultColor { get; }
+        protected abstract int DefaultSize { get; }
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
 
-        public EnableCheckBox()
+        protected EnableCheckBox()
         {
             this.ThreeState = false;
-
-            this.Load += (sender, args) =>
-            {
-                this.Checked = McPlugin.Settings.GetBool(this.Key); // get DB //
-                this.EnableSubSetting();
-            };
-
-            this.CheckedChanged += (sender, args) =>
-            {
-                bool value = MethodBasic.SafeCast(this.Checked);
-                McPlugin.Settings.SetBool(this.Key, value); // set DB //
-                this.EnableSubSetting();
-            };
-
         }
-        
-        private void EnableSubSetting()
+
+        protected System.Drawing.Color EnableSubSetting()
         {
+            // Enable SubSetting Loop//
             bool value = MethodBasic.SafeCast(this.Checked);
             if (this.ControlArray != null)
             {
@@ -1011,17 +999,61 @@ namespace MultiCut
             
             this.ColorCheck.Enabled = value;
             bool colorCheck = MethodBasic.SafeCast(this.ColorCheck.Checked);
+            this.ColorPick.Value = colorCheck ? McPlugin.Settings.GetColor(this.ColorKey).ToEto() : this.DefaultColor;
             bool colorDoubleCheck = value & colorCheck;
             this.ColorPick.Enabled = colorDoubleCheck;
-            this.ColorPick.Value = colorCheck ? McPlugin.Settings.GetColor(this.ColorKey).ToEto() : this.DefaultColor;
+            System.Drawing.Color mctColor = colorDoubleCheck ? McPlugin.Settings.GetColor(this.ColorKey) : this.DefaultColor.ToSystemDrawing();
+
+            return mctColor;
 
 
-            this.SizeCheck.Enabled = value;
-            bool sizeCheck = MethodBasic.SafeCast(this.SizeCheck.Checked);
-            bool sizeDoubleCheck = value & sizeCheck;
-            this.SizeSlide.Enabled = sizeDoubleCheck;
-            this.SizeSlide.Value = sizeCheck ? McPlugin.Settings.GetInteger(this.SizeKey) : this.DefaultSize;
-            
+            //this.SizeCheck.Enabled = value;
+            //bool sizeCheck = MethodBasic.SafeCast(this.SizeCheck.Checked);
+            //this.SizeSlide.Value = sizeCheck ? McPlugin.Settings.GetInteger(this.SizeKey) : this.DefaultSize;
+            //bool sizeDoubleCheck = value & sizeCheck;
+            //this.SizeSlide.Enabled = sizeDoubleCheck;
+            //mctSize = sizeDoubleCheck ? McPlugin.Settings.GetInteger(this.SizeKey) : this.DefaultSize;
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            this.Checked = McPlugin.Settings.GetBool(this.Key); // get DB //
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            bool value = MethodBasic.SafeCast(this.Checked);
+            McPlugin.Settings.SetBool(this.Key, value); // set DB //
+            base.OnCheckedChanged(e);
+        }
+    }
+
+    public sealed class APEnableCheck : EnableCheckBox
+    {
+        protected override string Key => SettingKey.AssistantPoint_EnableCheck;
+        protected override string ColorKey => SettingKey.AssistantPoint_ColorPick;
+        protected override string SizeKey => SettingKey.AssistantPoint_SizePick;
+        protected override Control[] ControlArray => null;
+        protected override CheckBox ColorCheck => APColorCheck.Instance;
+        protected override ColorPicker ColorPick => APColorPicker.Instance;
+        protected override CheckBox SizeCheck => null;
+        protected override Slider SizeSlide => null;
+        protected override Color DefaultColor => McPref.defaultPointColor;
+        protected override int DefaultSize => McPref.defaultPointSize;
+        public static APEnableCheck Instance { get; } = new APEnableCheck();
+        private APEnableCheck(){}
+
+        protected override void OnLoad(EventArgs e)
+        {
+            McPref.PointColor = this.EnableSubSetting(); 
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            McPref.PointColor = this.EnableSubSetting();
+            base.OnCheckedChanged(e);
         }
     }
 
@@ -1101,7 +1133,7 @@ namespace MultiCut
         {
             this.Key = SettingKey.AssistantPoint_ColorCheck;
             this.ColorKey = SettingKey.AssistantPoint_ColorPick;
-            this.UpperCheck = null;
+            this.UpperCheck = APEnableCheck.Instance;
             this.ColorPick = APColorPicker.Instance;
             this.DefaultColor = McPref.defaultPointColor;
         }
