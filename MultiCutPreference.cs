@@ -942,8 +942,6 @@ namespace MultiCut
             SetSizeCheck();
             SetSizeSlide();
 
-            Control[] controlArray = { this.PointNumber };
-
             this.PtEnableCheck = APEnableCheck.Instance;
             this.PtColorCheck = APColorCheck.Instance;
             this.PtColorPick = APColorPicker.Instance;
@@ -964,6 +962,8 @@ namespace MultiCut
         }
     }
 
+    #region MCP Control Templates 
+    
     public abstract class EnableCheckBox : CheckBox
     {
         public sealed override string Text => "Enable";
@@ -985,9 +985,8 @@ namespace MultiCut
             this.ThreeState = false;
         }
 
-        protected System.Drawing.Color EnableSubSetting()
+        private void EnableSubSetting()
         {
-            // Enable SubSetting Loop//
             bool value = MethodBasic.SafeCast(this.Checked);
             if (this.ControlArray != null)
             {
@@ -996,28 +995,56 @@ namespace MultiCut
                     control.Enabled = value;
                 } 
             }
-            
+        }
+
+        protected bool SetMCTEnable()
+        {
+            bool value = MethodBasic.SafeCast(this.Checked);
+            return value;
+        }
+
+        protected System.Drawing.Color SetMCTColor()
+        {
+            bool value = MethodBasic.SafeCast(this.Checked);
             this.ColorCheck.Enabled = value;
+            
             bool colorCheck = MethodBasic.SafeCast(this.ColorCheck.Checked);
-            this.ColorPick.Value = colorCheck ? McPlugin.Settings.GetColor(this.ColorKey).ToEto() : this.DefaultColor;
+            this.ColorPick.Value = colorCheck 
+                ? McPlugin.Settings.GetColor(this.ColorKey).ToEto() 
+                : this.DefaultColor;
+            
             bool colorDoubleCheck = value & colorCheck;
             this.ColorPick.Enabled = colorDoubleCheck;
-            System.Drawing.Color mctColor = colorDoubleCheck ? McPlugin.Settings.GetColor(this.ColorKey) : this.DefaultColor.ToSystemDrawing();
+            System.Drawing.Color mctColor = colorDoubleCheck 
+                ? McPlugin.Settings.GetColor(this.ColorKey) 
+                : this.DefaultColor.ToSystemDrawing();
 
             return mctColor;
+        }
 
+        protected int SetMCTSize()
+        {
+            bool value = MethodBasic.SafeCast(this.Checked);
+            this.SizeCheck.Enabled = value;
+            
+            bool sizeCheck = MethodBasic.SafeCast(this.SizeCheck.Checked);
+            this.SizeSlide.Value = sizeCheck 
+                ? McPlugin.Settings.GetInteger(this.SizeKey) 
+                : this.DefaultSize;
+            
+            bool sizeDoubleCheck = value & sizeCheck;
+            this.SizeSlide.Enabled = sizeDoubleCheck;
+            int mctSize = sizeDoubleCheck 
+                ? McPlugin.Settings.GetInteger(this.SizeKey) 
+                : this.DefaultSize;
 
-            //this.SizeCheck.Enabled = value;
-            //bool sizeCheck = MethodBasic.SafeCast(this.SizeCheck.Checked);
-            //this.SizeSlide.Value = sizeCheck ? McPlugin.Settings.GetInteger(this.SizeKey) : this.DefaultSize;
-            //bool sizeDoubleCheck = value & sizeCheck;
-            //this.SizeSlide.Enabled = sizeDoubleCheck;
-            //mctSize = sizeDoubleCheck ? McPlugin.Settings.GetInteger(this.SizeKey) : this.DefaultSize;
+            return mctSize;
         }
 
         protected override void OnLoad(EventArgs e)
         {
             this.Checked = McPlugin.Settings.GetBool(this.Key); // get DB //
+            this.EnableSubSetting(); // Enable Sub Setting //
             base.OnLoad(e);
         }
 
@@ -1025,39 +1052,11 @@ namespace MultiCut
         {
             bool value = MethodBasic.SafeCast(this.Checked);
             McPlugin.Settings.SetBool(this.Key, value); // set DB //
+            this.EnableSubSetting(); // Enable Sub Setting //
             base.OnCheckedChanged(e);
         }
     }
-
-    public sealed class APEnableCheck : EnableCheckBox
-    {
-        protected override string Key => SettingKey.AssistantPoint_EnableCheck;
-        protected override string ColorKey => SettingKey.AssistantPoint_ColorPick;
-        protected override string SizeKey => SettingKey.AssistantPoint_SizePick;
-        protected override Control[] ControlArray => null;
-        protected override CheckBox ColorCheck => APColorCheck.Instance;
-        protected override ColorPicker ColorPick => APColorPicker.Instance;
-        protected override CheckBox SizeCheck => null;
-        protected override Slider SizeSlide => null;
-        protected override Color DefaultColor => McPref.defaultPointColor;
-        protected override int DefaultSize => McPref.defaultPointSize;
-        public static APEnableCheck Instance { get; } = new APEnableCheck();
-        private APEnableCheck(){}
-
-        protected override void OnLoad(EventArgs e)
-        {
-            McPref.PointColor = this.EnableSubSetting(); 
-            base.OnLoad(e);
-        }
-
-        protected override void OnCheckedChanged(EventArgs e)
-        {
-            McPref.PointColor = this.EnableSubSetting();
-            base.OnCheckedChanged(e);
-        }
-    }
-
-    public class CommonCheckBox : CheckBox
+     public class CommonCheckBox : CheckBox
     {
         private string SettingKey { get; }
         private GetDBBool GetDBBoolValue { get; }
@@ -1125,6 +1124,79 @@ namespace MultiCut
             base.OnCheckedChanged(e);
         }
     }
+    
+    public class CommonColorPicker : ColorPicker
+    {
+        public override int Width => 20;
+        protected string Key { get; set; }
+        private GetDBColor GetDBColorValue => McPlugin.Settings.GetColor;
+        private SetDBColor SetDBColorValue => McPlugin.Settings.SetColor;
+        protected Color DefaultColor { get; set; }
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        protected MultiCutPreference McPref => MultiCutPreference.Instance;
+
+        protected override void OnLoad(EventArgs e)
+        {
+            this.Value = this.GetDBColorValue(this.Key).ToEto(); // get DB //
+            base.OnLoad(e);
+        }
+
+        protected override void OnColorChanged(EventArgs e)
+        {
+            if (this.Value != this.DefaultColor)
+            {
+                this.SetDBColorValue(this.Key, this.Value.ToSystemDrawing()); // set DB //
+            }
+            base.OnColorChanged(e);
+        }
+    }
+
+    public class WidthCheckBox : CheckBox
+    {
+        
+    }
+
+    public class CommonSlider : Slider
+    {
+        
+    }
+    #endregion
+
+    #region Assitant Point UI Group
+    
+    public sealed class APEnableCheck : EnableCheckBox
+    {
+        protected override string Key => SettingKey.AssistantPoint_EnableCheck;
+        protected override string ColorKey => SettingKey.AssistantPoint_ColorPick;
+        protected override string SizeKey => SettingKey.AssistantPoint_SizePick;
+        protected override Control[] ControlArray => null;
+        protected override CheckBox ColorCheck => APColorCheck.Instance;
+        protected override ColorPicker ColorPick => APColorPicker.Instance;
+        protected override CheckBox SizeCheck => null;
+        protected override Slider SizeSlide => null;
+        protected override Color DefaultColor => McPref.defaultPointColor;
+        protected override int DefaultSize => McPref.defaultPointSize;
+        public static APEnableCheck Instance { get; } = new APEnableCheck();
+        private APEnableCheck(){}
+
+        protected override void OnLoad(EventArgs e)
+        {
+            McPref.PointColor = SetMCTColor();
+            //McPref.PointSize = SetMCTSize();
+            McPref.IsPointEnabled = SetMCTEnable();
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            McPref.PointColor = SetMCTColor();
+            //McPref.PointSize = SetMCTSize();
+            McPref.IsPointEnabled = SetMCTEnable();
+            base.OnCheckedChanged(e);
+        }
+    }
+
+   
 
     public class APColorCheck : ColorCheckBox
     {
@@ -1160,32 +1232,7 @@ namespace MultiCut
         }
     }
 
-    public class CommonColorPicker : ColorPicker
-    {
-        public override int Width => 20;
-        protected string Key { get; set; }
-        private GetDBColor GetDBColorValue => McPlugin.Settings.GetColor;
-        private SetDBColor SetDBColorValue => McPlugin.Settings.SetColor;
-        protected Color DefaultColor { get; set; }
-        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
-        protected MultiCutPreference McPref => MultiCutPreference.Instance;
-
-        protected override void OnLoad(EventArgs e)
-        {
-            this.Value = this.GetDBColorValue(this.Key).ToEto(); // get DB //
-            base.OnLoad(e);
-        }
-
-        protected override void OnColorChanged(EventArgs e)
-        {
-            if (this.Value != this.DefaultColor)
-            {
-                this.SetDBColorValue(this.Key, this.Value.ToSystemDrawing()); // set DB //
-            }
-            base.OnColorChanged(e);
-        }
-    }
-
+    
     public class APColorPicker : CommonColorPicker
     {
         public static APColorPicker Instance { get; } = new APColorPicker();
@@ -1201,11 +1248,10 @@ namespace MultiCut
             base.OnColorChanged(e);
         }
     }
+    
+    #endregion
 
-    public class CommonSlider : Slider
-    {
-        
-    }
+
 
     public interface IGroupCommon
     {
