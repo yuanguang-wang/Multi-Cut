@@ -21,7 +21,7 @@ namespace MultiCut
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             Core coreObj = new Core(doc);
-            MethodBasic.CurrentDoc = doc;
+            MethodCollection.CurrentDoc = doc;
             if (coreObj.CollectionResult == false)
             {
                 return Result.Cancel;
@@ -98,7 +98,7 @@ namespace MultiCut
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            MethodBasic.CurrentDoc = doc;
+            MethodCollection.CurrentDoc = doc;
             PreferenceForm formObj = new PreferenceForm();
             
             formObj.Show();

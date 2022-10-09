@@ -13,9 +13,11 @@ using Rhino.UI;
 namespace MultiCut
 {
     
-    internal static class MethodBasic
+    internal static class MethodCollection
     {
         public static RhinoDoc CurrentDoc { get; set; }
+
+        #region Core Method
         
         public static int RemapInt(int slideNum)
         {
@@ -165,6 +167,9 @@ namespace MultiCut
             }
             return faceIndexList;
         }
+        
+        #endregion
+        #region Preference Method
 
         public static bool DoubleCheck(bool? upperCheck, bool? localCheck)
         {
@@ -180,6 +185,32 @@ namespace MultiCut
             // ReSharper disable once PossibleInvalidOperationException
             return (bool)boolPassed;
         }
+
+        public static System.Drawing.Color SetMCTUIColor(
+            bool? thisChecked,
+            bool? colorChecked,
+            System.Drawing.Color dbColor,
+            System.Drawing.Color defaultColor
+        )
+        {
+            bool colorDoubleCheck = DoubleCheck(thisChecked,colorChecked);
+            System.Drawing.Color mctColor = colorDoubleCheck ? dbColor : defaultColor;
+            return mctColor;
+        }
+
+        public static int SetMCTUIWidth(
+            bool? thisChecked,
+            bool? widthChecked,
+            int dbWidth,
+            int defaultWidth
+        )
+        {
+            bool widthDoubleCheck = DoubleCheck(thisChecked, widthChecked);
+            int mctWidth = widthDoubleCheck ? dbWidth : defaultWidth;
+            return mctWidth;
+        }
+
+        #endregion
 
     }
 
@@ -218,7 +249,7 @@ namespace MultiCut
         public Core(RhinoDoc currentDoc)
         {
             this.currentDoc = currentDoc;
-            this.CollectionResult = MethodBasic.ObjectCollecter(out this.baseBrep, out this.baseBrepRef);
+            this.CollectionResult = MethodCollection.ObjectCollecter(out this.baseBrep, out this.baseBrepRef);
 
             this.OctopusArmStocker = new List<Curve>();
             this.OctopusPtStocker = new List<Point3d>();
@@ -300,7 +331,7 @@ namespace MultiCut
             // decide to stop the new gp generation when press enter (3 pt above).
             foreach (bool isPtOnSrf in 
                      this.CurrentFaceFoundIndexList.Select
-                        (faceIndex => MethodBasic.OnLoopFilter
+                        (faceIndex => MethodCollection.OnLoopFilter
                             (this.baseBrep, faceIndex, this.CurrentPt, this.LastPt, this.currentDoc)
                         )
                      )
@@ -317,26 +348,26 @@ namespace MultiCut
         public int CurrentEdgeFinder()
         {
             this.CurrentEdgeFoundList = new List<BrepEdge>();
-            CurrentEdgeFoundList = MethodBasic.EdgeFinder(this.CurrentPt, this.baseBrep, this.currentDoc);
+            CurrentEdgeFoundList = MethodCollection.EdgeFinder(this.CurrentPt, this.baseBrep, this.currentDoc);
             return this.CurrentEdgeFoundList.Count;
         }
         private void CurrentFaceFinder()
         {
             this.CurrentFaceFoundIndexList = new List<int>();
-            CurrentFaceFoundIndexList = MethodBasic.FaceFinder(this.CurrentEdgeFoundList);
+            CurrentFaceFoundIndexList = MethodCollection.FaceFinder(this.CurrentEdgeFoundList);
         }
 
         private int LastEdgeFinder()
         {
             this.LastEdgeFoundList = new List<BrepEdge>();
-            LastEdgeFoundList = MethodBasic.EdgeFinder(this.LastPt, this.baseBrep, this.currentDoc);
+            LastEdgeFoundList = MethodCollection.EdgeFinder(this.LastPt, this.baseBrep, this.currentDoc);
             return this.LastEdgeFoundList.Count;
         }
 
         private void LastFaceFinder()
         {
             this.LastFaceFoundIndexList = new List<int>();
-            LastFaceFoundIndexList = MethodBasic.FaceFinder(this.LastEdgeFoundList);
+            LastFaceFoundIndexList = MethodCollection.FaceFinder(this.LastEdgeFoundList);
         }
         
         #endregion
@@ -385,7 +416,7 @@ namespace MultiCut
                 Curve[] isov = bFace.TrimAwareIsoCurve(0, v);
                 foreach (Curve iso in isou)
                 {
-                    MethodBasic.OctopusBundleCollector(iso, this.LastPt, this.baseBrep, this.currentDoc,
+                    MethodCollection.OctopusBundleCollector(iso, this.LastPt, this.baseBrep, this.currentDoc,
                         out Dictionary<Curve, OctopusType> octopusRawDic, 
                         OctopusType._ISOU);
                     foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
@@ -395,7 +426,7 @@ namespace MultiCut
                 }
                 foreach (Curve iso in isov)
                 {
-                    MethodBasic.OctopusBundleCollector(iso, this.LastPt, this.baseBrep, this.currentDoc,
+                    MethodCollection.OctopusBundleCollector(iso, this.LastPt, this.baseBrep, this.currentDoc,
                         out Dictionary<Curve, OctopusType> octopusRawDic, 
                         OctopusType._ISOV);
                     foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
@@ -438,7 +469,7 @@ namespace MultiCut
                     {
                         foreach (Curve crv in intersecrtionCrvs)
                         {
-                            MethodBasic.OctopusBundleCollector(crv, this.LastPt, this.baseBrep, this.currentDoc,
+                            MethodCollection.OctopusBundleCollector(crv, this.LastPt, this.baseBrep, this.currentDoc,
                                                                out Dictionary<Curve, OctopusType> octopusRawDic, 
                                                                cplType[i]);
                             foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
@@ -476,7 +507,7 @@ namespace MultiCut
                     {
                         foreach (Curve crv in intersecrtionCrvs)
                         {
-                            MethodBasic.OctopusBundleCollector(crv, this.LastPt, this.baseBrep, this.currentDoc,
+                            MethodCollection.OctopusBundleCollector(crv, this.LastPt, this.baseBrep, this.currentDoc,
                                                                out Dictionary<Curve, OctopusType> octopusRawDic, 
                                                                wplType[i]);
                             foreach (KeyValuePair<Curve, OctopusType> element in octopusRawDic)
@@ -494,7 +525,7 @@ namespace MultiCut
         {
             foreach (int i in CurrentFaceFoundIndexList)
             {
-                bool isPtOnSrf = MethodBasic.OnLoopFilter(this.baseBrep, i, this.CurrentPt, this.LastPt,
+                bool isPtOnSrf = MethodCollection.OnLoopFilter(this.baseBrep, i, this.CurrentPt, this.LastPt,
                     this.currentDoc);
                 if (isPtOnSrf)
                 {
