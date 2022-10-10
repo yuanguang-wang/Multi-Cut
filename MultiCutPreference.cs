@@ -977,7 +977,7 @@ namespace MultiCut
         protected abstract Slider SizeSlide { get; }
         protected abstract Color DefaultColor { get; }
         protected abstract int DefaultSize { get; }
-        protected MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
 
         protected EnableCheckBox()
@@ -997,44 +997,20 @@ namespace MultiCut
             }
         }
 
-        protected abstract void EnableSubSettings();
-        
-        protected System.Drawing.Color SetMCTColor()
+        protected virtual void EnableSubSettings()
         {
             bool value = MethodCollection.SafeCast(this.Checked);
+            // UI Setting //
             this.ColorCheck.Enabled = value;
+            this.ColorPick.Enabled = MethodCollection.DoubleCheck(this.Checked, this.ColorCheck.Checked);
+            this.ColorPick.Value = MethodCollection.SetMCTUIColor(
+                this.Checked, 
+                this.ColorCheck.Checked,
+                McPlugin.Settings.GetColor(this.ColorKey), 
+                this.DefaultColor.ToSystemDrawing()
+                ).ToEto();
+            // DB Setting //
             
-            bool colorCheck = MethodCollection.SafeCast(this.ColorCheck.Checked);
-            this.ColorPick.Value = colorCheck 
-                ? McPlugin.Settings.GetColor(this.ColorKey).ToEto() 
-                : this.DefaultColor;
-            
-            bool colorDoubleCheck = value & colorCheck;
-            this.ColorPick.Enabled = colorDoubleCheck;
-            System.Drawing.Color mctColor = colorDoubleCheck 
-                ? McPlugin.Settings.GetColor(this.ColorKey) 
-                : this.DefaultColor.ToSystemDrawing();
-
-            return mctColor;
-        }
-
-        protected int SetMCTSize()
-        {
-            bool value = MethodCollection.SafeCast(this.Checked);
-            this.SizeCheck.Enabled = value;
-            
-            bool sizeCheck = MethodCollection.SafeCast(this.SizeCheck.Checked);
-            this.SizeSlide.Value = sizeCheck 
-                ? McPlugin.Settings.GetInteger(this.SizeKey) 
-                : this.DefaultSize;
-            
-            bool sizeDoubleCheck = value & sizeCheck;
-            this.SizeSlide.Enabled = sizeDoubleCheck;
-            int mctSize = sizeDoubleCheck 
-                ? McPlugin.Settings.GetInteger(this.SizeKey) 
-                : this.DefaultSize;
-
-            return mctSize;
         }
 
         protected override void OnLoad(EventArgs e)
@@ -1177,20 +1153,11 @@ namespace MultiCut
         protected override void EnableSubSettings()
         {
             bool value = MethodCollection.SafeCast(this.Checked);
-            // UI Setting //
-            this.ColorCheck.Enabled = value;
-            this.ColorPick.Enabled = MethodCollection.DoubleCheck(this.Checked, this.ColorCheck.Checked);
-            this.ColorPick.Value = MethodCollection.SetMCTUIColor(
-                this.Checked, 
-                this.ColorCheck.Checked,
-                McPlugin.Settings.GetColor(this.ColorKey), 
-                this.DefaultColor.ToSystemDrawing()
-                ).ToEto();
             // MCT Setting //
             McPref.IsPointEnabled = value;
             McPref.PointColor = this.ColorPick.Value.ToSystemDrawing();
-           
-
+            
+            base.EnableSubSettings();
         }
 
         protected override void OnLoad(EventArgs e)
