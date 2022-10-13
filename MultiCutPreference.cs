@@ -760,9 +760,6 @@ namespace MultiCut
     
     public class AssistantPointBox : GroupBox, IGroupCommon
     {
-        public RhinoDoc CurrentDoc => MethodCollection.CurrentDoc;
-        public MultiCutPreference McPref => MultiCutPreference.Instance;
-        public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
         public static AssistantPointBox Instance { get; } = new AssistantPointBox();
         private AssistantPointBox()
@@ -772,42 +769,19 @@ namespace MultiCut
             this.SetGroupLayout();
             this.Content = this.GroupBoxLayout;
         }
-        private DropDown PointNumber { get; set; }
-        private void SetPointNumber()
-        {
-            this.PointNumber = new DropDown(); 
-            IEnumerable<object> PointNumbers = new List<object>() {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
-            this.PointNumber.DataStore = PointNumbers;
-
-            this.PointNumber.Load += (sender, args) =>
-            {
-                this.PointNumber.SelectedIndex = McPlugin.Settings.GetInteger(SettingKey.AssistantPoint_PointNumber); // get DB //
-            };
-            this.PointNumber.SelectedIndexChanged += (sender, args) =>
-            {
-                int selectedIndex = this.PointNumber.SelectedIndex;
-                McPlugin.Settings.SetInteger(SettingKey.AssistantPoint_PointNumber, selectedIndex); // set DB //
-                McPref.PointNumber = selectedIndex + 2; // notify MCT //
-            };
-        }
-
         public void SetGroupLayout()
         {
-            SetPointNumber();
-
             this.GroupBoxLayout = new DynamicLayout();
             IEnumerable<Control> controls = new Control[]
             {
                 APEnableCheck.Instance, 
-                this.PointNumber,
+                APDropDown.Instance,
                 APColorCheck.Instance, 
                 APColorPicker.Instance,
                 APWidthCheck.Instance,
                 APWidthSilder.Instance
             };
-            
             this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
-
         }
     }
 
@@ -872,36 +846,56 @@ namespace MultiCut
             base.OnCheckedChanged(e);
         }
     }
-     public class CommonCheckBox : CheckBox
+     public abstract class CommonCheckBox : CheckBox
     {
-        private string SettingKey { get; }
-        private GetDBBool GetDBBoolValue { get; }
-        private SetDBBool SetDBBoolValue { get; }
+        protected abstract string Key { get; }
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        protected MultiCutPreference McPref => MultiCutPreference.Instance;
 
-        public CommonCheckBox(
-            string settingKey,
-            GetDBBool getDbBool,
-            SetDBBool setDbBool
-        )
+        protected CommonCheckBox()
         {
-            this.SettingKey = settingKey;
-            this.GetDBBoolValue = getDbBool;
-            this.SetDBBoolValue = setDbBool;
             this.ThreeState = false;
+        }
 
-            this.Load += (sender, args) =>
-            {
-                this.Checked = this.GetDBBoolValue(this.SettingKey); // get DB //
-            };
-            this.CheckedChanged += (sender, args) =>
-            {
-                bool value = MethodCollection.SafeCast(this.Checked);
-                this.SetDBBoolValue(this.SettingKey, value); // set DB //
-            };
+        protected override void OnLoad(EventArgs e)
+        {
+            this.Checked = McPlugin.Settings.GetBool(this.Key); // get DB //
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            McPlugin.Settings.SetBool(this.Key, MethodCollection.SafeCast(this.Checked)); // set DB //
+            base.OnCheckedChanged(e);
         }
     }
 
-    public abstract class ColorCheckBox : CheckBox
+     public abstract class CommonDropDown : DropDown
+     {
+         protected abstract string Key { get; }
+         private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+         protected MultiCutPreference McPref => MultiCutPreference.Instance;
+
+         protected CommonDropDown()
+         { 
+             IEnumerable<object> PointNumbers = new List<object>() {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+             this.DataStore = PointNumbers;
+         }
+
+         protected override void OnLoad(EventArgs e)
+         {
+             this.SelectedIndex = McPlugin.Settings.GetInteger(this.Key); // get DB //
+             base.OnLoad(e);
+         }
+
+         protected override void OnSelectedIndexChanged(EventArgs e)
+         {
+             McPlugin.Settings.SetInteger(this.Key,this.SelectedIndex); // set DB //
+             base.OnSelectedIndexChanged(e);
+         }
+     }
+
+     public abstract class ColorCheckBox : CheckBox
     {
         protected abstract string Key { get; }
         protected abstract CheckBox UpperCheck { get; }
@@ -1046,7 +1040,7 @@ namespace MultiCut
         protected override string Key => SettingKey.AssistantPoint_EnableCheck;
         protected override string ColorKey => SettingKey.AssistantPoint_ColorPick;
         protected override string SizeKey => SettingKey.AssistantPoint_SizePick;
-        protected override Control[] ControlArray => null;
+        protected override Control[] ControlArray => new Control[]{APDropDown.Instance};
         protected override CheckBox ColorCheck => APColorCheck.Instance;
         protected override ColorPicker ColorPick => APColorPicker.Instance;
         protected override CheckBox SizeCheck => APWidthCheck.Instance;
@@ -1078,7 +1072,17 @@ namespace MultiCut
         }
     }
 
-   
+    public sealed class APDropDown : CommonDropDown
+    {
+        protected override string Key => SettingKey.AssistantPoint_PointNumber;
+        public static APDropDown Instance { get; } = new APDropDown();
+        private APDropDown() { }
+        protected override void OnSelectedIndexChanged(EventArgs e)
+        {
+            McPref.PointNumber = this.SelectedIndex + 2;
+            base.OnSelectedIndexChanged(e);
+        }
+    }
 
     public sealed class APColorCheck : ColorCheckBox
     {
@@ -1190,18 +1194,10 @@ namespace MultiCut
 
     #endregion
 
-
-
     public interface IGroupCommon
     {
-        RhinoDoc CurrentDoc { get; }
-        MultiCutPreference McPref { get; }
-        MultiCutPlugin McPlugin { get; }
         DynamicLayout GroupBoxLayout { get; set; }
         void SetGroupLayout();
     }
-
-    public delegate bool GetDBBool (string SettingKey);
-    public delegate void SetDBBool (string SettingKey, bool value);
 
 }   
