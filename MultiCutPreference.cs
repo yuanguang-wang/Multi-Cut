@@ -43,7 +43,7 @@ namespace MultiCut
         
         public readonly Color defaultProphetColor = Colors.LimeGreen;
         public readonly Color defaultOctopusColor = Colors.Blue;
-        public readonly Color defaultPointColor = Colors.Brown;
+        public readonly Color defaultPointColor = Colors.Red;
         public int defaultPointSize => (int) MethodCollection.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.PointRadius;
         public int defaultLineWidth => MethodCollection.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
@@ -790,15 +790,11 @@ namespace MultiCut
     public abstract class EnableCheckBox : CheckBox
     {
         protected abstract string Key { get; }
-        protected abstract string ColorKey { get; }
-        protected abstract string SizeKey { get; }
         protected abstract Control[] ControlArray { get; }
         protected abstract CheckBox ColorCheck { get; }
         protected abstract ColorPicker ColorPick { get; }
-        protected abstract CheckBox SizeCheck { get; }
+        protected abstract CheckBox WidthCheck { get; }
         protected abstract Slider SizeSlide { get; }
-        protected abstract Color DefaultColor { get; }
-        protected abstract int DefaultSize { get; }
         private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
 
@@ -811,6 +807,8 @@ namespace MultiCut
         private void EnableSubCheckBox()
         {
             bool value = MethodCollection.SafeCast(this.Checked);
+            this.ColorCheck.Enabled = value;
+            this.WidthCheck.Enabled = value;
             if (this.ControlArray != null)
             {
                 foreach (Control control in ControlArray)
@@ -822,13 +820,9 @@ namespace MultiCut
 
         protected virtual void EnableSubSettings()
         {
-            bool value = MethodCollection.SafeCast(this.Checked);
             // UI Setting //
-            this.ColorCheck.Enabled = value;
             this.ColorPick.Enabled = MethodCollection.DoubleCheck(this.Checked, this.ColorCheck.Checked);
-
-            this.SizeCheck.Enabled = value;
-            this.SizeSlide.Enabled = MethodCollection.DoubleCheck(this.Checked, this.SizeCheck.Checked);
+            this.SizeSlide.Enabled = MethodCollection.DoubleCheck(this.Checked, this.WidthCheck.Checked);
         }
 
         protected override void OnLoad(EventArgs e)
@@ -1032,21 +1026,30 @@ namespace MultiCut
     }
     
     #endregion
+    #region Prediction Line UI Group
+    
+    public sealed class PLEnableCheck : EnableCheckBox
+    {
+        protected override string Key => SettingKey.PredictionLine_EnableCheck;
+        protected override Control[] ControlArray => null;
+        protected override CheckBox ColorCheck => null;
+        protected override ColorPicker ColorPick => null;
+        protected override CheckBox WidthCheck => null;
+        protected override Slider SizeSlide => null;
 
+    }
+
+    #endregion
     #region Assitant Point UI Group
     
     public sealed class APEnableCheck : EnableCheckBox
     {
         protected override string Key => SettingKey.AssistantPoint_EnableCheck;
-        protected override string ColorKey => SettingKey.AssistantPoint_ColorPick;
-        protected override string SizeKey => SettingKey.AssistantPoint_SizePick;
         protected override Control[] ControlArray => new Control[]{APDropDown.Instance};
         protected override CheckBox ColorCheck => APColorCheck.Instance;
         protected override ColorPicker ColorPick => APColorPicker.Instance;
-        protected override CheckBox SizeCheck => APWidthCheck.Instance;
+        protected override CheckBox WidthCheck => APWidthCheck.Instance;
         protected override Slider SizeSlide => APWidthSilder.Instance;
-        protected override Color DefaultColor => McPref.defaultPointColor;
-        protected override int DefaultSize => McPref.defaultPointSize;
         public static APEnableCheck Instance { get; } = new APEnableCheck();
         private APEnableCheck(){}
 
