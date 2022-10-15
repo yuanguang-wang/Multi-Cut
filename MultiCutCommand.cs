@@ -93,15 +93,23 @@ namespace MultiCut
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public static PreferenceCommand Instance { get; private set; }
         public override string EnglishName => "mcp";
-        
+        private PreferenceForm FromObj { get; set; }
+
         #endregion
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
             MethodCollection.CurrentDoc = doc;
-            PreferenceForm formObj = new PreferenceForm();
-            
-            formObj.Show();
+            if (this.FromObj == null)
+            {
+                this.FromObj = new PreferenceForm();
+                this.FromObj.Closed += (sender, args) =>
+                {
+                    this.FromObj.Dispose();
+                    this.FromObj = null;
+                };
+                this.FromObj.Show();
+            }
             
             return Result.Success;
         }

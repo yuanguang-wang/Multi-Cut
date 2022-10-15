@@ -142,7 +142,7 @@ namespace MultiCut
         private OctopusLineBox OctopusLine => OctopusLineBox.Instance;
         private AssistantPointBox AssistantPoint => AssistantPointBox.Instance;
         private DynamicLayout PreferenceLayout { get; set; }
-        
+
 
         public PreferenceForm()
         {
@@ -165,10 +165,10 @@ namespace MultiCut
             this.PreferenceLayout.Spacing = new Size(10,10);
             
             IEnumerable<GroupBox> controls_1 = new GroupBox[] { this.General, this.About, this.OctopusLine };
-            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.AssistantPoint, this.PredictionLine };
+            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.AssistantPoint, };//this.PredictionLine };
             
             this.PreferenceLayout.BeginHorizontal();
-            this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, controls_1);
+            this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, null);
             this.PreferenceLayout.AddSeparateColumn(new Padding(5,10,10,10), 10, false, false, controls_2);
             this.PreferenceLayout.EndHorizontal();
 
@@ -181,11 +181,6 @@ namespace MultiCut
             base.OnLoad(e);
         }
 
-        protected override void OnClosed(EventArgs e)
-        {
-            base.OnClosed(e);
-            this.Dispose();
-        }
     }
 
     public class GeneralBox : GroupBox, IGroupCommon
@@ -836,6 +831,7 @@ namespace MultiCut
         {
             bool value = MethodCollection.SafeCast(this.Checked);
             McPlugin.Settings.SetBool(this.Key, value); // set DB //
+            McPlugin.SaveSettings();
             this.EnableSubCheckBox(); // Enable Sub Setting //
             base.OnCheckedChanged(e);
         }
@@ -860,6 +856,7 @@ namespace MultiCut
         protected override void OnCheckedChanged(EventArgs e)
         {
             McPlugin.Settings.SetBool(this.Key, MethodCollection.SafeCast(this.Checked)); // set DB //
+            McPlugin.SaveSettings();
             base.OnCheckedChanged(e);
         }
     }
@@ -885,6 +882,7 @@ namespace MultiCut
          protected override void OnSelectedIndexChanged(EventArgs e)
          {
              McPlugin.Settings.SetInteger(this.Key,this.SelectedIndex); // set DB //
+             McPlugin.SaveSettings();
              base.OnSelectedIndexChanged(e);
          }
      }
@@ -922,6 +920,7 @@ namespace MultiCut
         {
             bool value = MethodCollection.SafeCast(this.Checked);
             McPlugin.Settings.SetBool(this.Key, value); // set DB //
+            McPlugin.SaveSettings();
             base.OnCheckedChanged(e);
         }
     }
@@ -939,12 +938,19 @@ namespace MultiCut
         protected WidthCheckBox()
         {
             this.ThreeState = false;
+            RhinoApp.WriteLine(WidthSlider.Value + ": base WidthCheckBox.ctor(), UI");
+            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": base WidthCheckBox.ctor(), DB");
         }
 
         protected virtual void EnableSubSetting()
         {  
             // UI Setting //
+            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": base WidthCheckBox.EnableSubSetting(), DB");
+            RhinoApp.WriteLine(this.WidthSlider.Value + ": base WidthCheckBox.EnableSubSetting(), UI");
             this.WidthSlider.Enabled = MethodCollection.DoubleCheck(this.Checked, this.UpperCheck.Checked);
+            this.WidthSlider.Value = MethodCollection.SafeCast(this.Checked)
+                ? McPlugin.Settings.GetInteger(this.WidthKey)
+                : this.DefaultWidth;
         }
         
         protected override void OnLoad(EventArgs e)
@@ -956,6 +962,7 @@ namespace MultiCut
         protected override void OnCheckedChanged(EventArgs e)
         {
             McPlugin.Settings.SetBool(this.Key, MethodCollection.SafeCast(this.Checked)); // set DB //
+            McPlugin.SaveSettings();
             base.OnCheckedChanged(e);
         }
     }
@@ -983,6 +990,7 @@ namespace MultiCut
             if (this.Value != this.DefaultColor)
             {
                 McPlugin.Settings.SetColor(this.Key, this.Value.ToSystemDrawing()); // set DB //
+                McPlugin.SaveSettings();
             }
             base.OnColorChanged(e);
         }
@@ -992,34 +1000,27 @@ namespace MultiCut
     {
         protected abstract string Key { get; }
         protected abstract int DefaultWidth { get; }
-        protected abstract CheckBox UpperCheck { get; }
-        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        protected MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
 
         protected CommonWidthSlider()
         {
             this.MaxValue = 9;
             this.MinValue = 1;
-            this.Value = 3;
             this.TickFrequency = 1;
             this.SnapToTick = true;
-        }
-
-        protected override void OnLoad(EventArgs e)
-        { 
-            // get DB //
-            this.Value = MethodCollection.SafeCast(UpperCheck.Checked)
-                ? McPlugin.Settings.GetInteger(this.Key)
-                : this.DefaultWidth;
-            
-            base.OnLoad(e);
+            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": base Slider.ctor(), DB");
+            RhinoApp.WriteLine(this.Value + ": base Slider.ctor(), UI");
         }
 
         protected override void OnValueChanged(EventArgs e)
         {
             if (this.Value != this.DefaultWidth)
             {
+                RhinoApp.WriteLine(this.Value + ": base Slider.OnValueChanged(e), UI");
+                RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": base Slider.OnValueChanged(e), DB");
                 McPlugin.Settings.SetInteger(this.Key, this.Value); // set DB //
+                McPlugin.SaveSettings();
             }
             base.OnValueChanged(e);
         }
@@ -1042,38 +1043,7 @@ namespace MultiCut
     #endregion
     #region Assitant Point UI Group
     
-    public sealed class APEnableCheck : EnableCheckBox
-    {
-        protected override string Key => SettingKey.AssistantPoint_EnableCheck;
-        protected override Control[] ControlArray => new Control[]{APDropDown.Instance};
-        protected override CheckBox ColorCheck => APColorCheck.Instance;
-        protected override ColorPicker ColorPick => APColorPicker.Instance;
-        protected override CheckBox WidthCheck => APWidthCheck.Instance;
-        protected override Slider SizeSlide => APWidthSilder.Instance;
-        public static APEnableCheck Instance { get; } = new APEnableCheck();
-        private APEnableCheck(){}
 
-        protected override void EnableSubSettings()
-        {
-            bool value = MethodCollection.SafeCast(this.Checked);
-            // MCT Setting //
-            McPref.IsPointEnabled = value;
-            
-            base.EnableSubSettings();
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            this.EnableSubSettings();
-            base.OnLoad(e);
-        }
-
-        protected override void OnCheckedChanged(EventArgs e)
-        {
-            this.EnableSubSettings();
-            base.OnCheckedChanged(e);
-        }
-    }
 
     public sealed class APDropDown : CommonDropDown
     {
@@ -1131,12 +1101,35 @@ namespace MultiCut
         protected override Color DefaultColor => McPref.defaultPointColor;
         protected override CheckBox UpperCheck => APColorCheck.Instance;
         public static APColorPicker Instance { get; } = new APColorPicker();
-        private APColorPicker() { }
-        
-        protected override void OnColorChanged(EventArgs e)
+
+        private APColorPicker()
         {
-            McPref.PointColor = this.Value.ToSystemDrawing();
-            base.OnColorChanged(e);
+            this.ValueChanged += (sender, args) =>
+            {
+                McPref.PointColor = this.Value.ToSystemDrawing();
+            };
+        }
+    }
+    
+    public sealed class APWidthSilder : CommonWidthSlider
+    {
+        protected override string Key => SettingKey.AssistantPoint_SizePick;
+        protected override int DefaultWidth => McPref.defaultPointSize;
+        public static APWidthSilder Instance { get; } = new APWidthSilder();
+
+        private APWidthSilder()
+        {
+            RhinoApp.WriteLine(this.Value + ": this Slider.ctor(), UI");
+            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": this Slider.ctor(), DB");
+        }
+
+        protected override void OnValueChanged(EventArgs e)
+        { 
+            RhinoApp.WriteLine(this.Value + ": this Slider.OnValueChanged(e), UI");
+            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": this Slider.OnValueChanged(e), DB");
+            McPref.PointSize = this.Value;
+            
+            base.OnValueChanged(e);
         }
     }
 
@@ -1152,46 +1145,67 @@ namespace MultiCut
         private APWidthCheck()
         {
             this.Text = "Customize PointSize";
+            RhinoApp.WriteLine(this.WidthSlider.Value + ": this Check.ctor(), UI");
+            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": this Check.ctor(), DB");
         }
 
         protected override void EnableSubSetting()
         {
             // MCT Setting //
-            McPref.PointSize = MethodCollection.SetMCTUIWidth(
-                this.Checked, 
-                this.UpperCheck.Checked,
-                McPlugin.Settings.GetInteger(this.WidthKey), 
-                this.DefaultWidth
-                );
-            this.WidthSlider.Value = McPref.PointSize;
-            
             base.EnableSubSetting();
+            McPref.PointSize = MethodCollection.SafeCast(this.Checked)
+                ? McPlugin.Settings.GetInteger(this.WidthKey)
+                : this.DefaultWidth;
+            RhinoApp.WriteLine(this.WidthSlider.Value.ToString() + ": this Check.EnableSubSetting(), UI");
+            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey).ToString() + ": this Check.EnableSubSetting(), DB");
         }
 
         protected override void OnLoad(EventArgs e)
         {
             this.EnableSubSetting();
+            RhinoApp.WriteLine("this Check.OnLoad");
             base.OnLoad(e);
         }
 
         protected override void OnCheckedChanged(EventArgs e)
         {
             this.EnableSubSetting();
+            RhinoApp.WriteLine("this Check.OnValueChanged");
             base.OnCheckedChanged(e);
         }
     }
-    
-    public sealed class APWidthSilder : CommonWidthSlider
+
+ 
+    public sealed class APEnableCheck : EnableCheckBox
     {
-        protected override string Key => SettingKey.AssistantPoint_SizePick;
-        protected override int DefaultWidth => McPref.defaultPointSize;
-        protected override CheckBox UpperCheck => APWidthCheck.Instance;
-        public static APWidthSilder Instance { get; } = new APWidthSilder();
-        private APWidthSilder() { }
-        protected override void OnValueChanged(EventArgs e)
+        protected override string Key => SettingKey.AssistantPoint_EnableCheck;
+        protected override Control[] ControlArray => new Control[]{APDropDown.Instance};
+        protected override CheckBox ColorCheck => APColorCheck.Instance;
+        protected override ColorPicker ColorPick => APColorPicker.Instance;
+        protected override CheckBox WidthCheck => APWidthCheck.Instance;
+        protected override Slider SizeSlide => APWidthSilder.Instance;
+        public static APEnableCheck Instance { get; } = new APEnableCheck();
+        private APEnableCheck(){}
+
+        protected override void EnableSubSettings()
         {
-            McPref.PointSize = this.Value;
-            base.OnValueChanged(e);
+            bool value = MethodCollection.SafeCast(this.Checked);
+            // MCT Setting //
+            McPref.IsPointEnabled = value;
+            
+            base.EnableSubSettings();
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            this.EnableSubSettings();
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            this.EnableSubSettings();
+            base.OnCheckedChanged(e);
         }
     }
 
