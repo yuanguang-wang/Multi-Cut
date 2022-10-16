@@ -774,7 +774,6 @@ namespace MultiCut
                 APColorCheck.Instance, 
                 APColorPicker.Instance,
                 APWidthCheck.Instance,
-                APWidthSilder.Instance
             };
             this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
         }
@@ -1006,9 +1005,10 @@ namespace MultiCut
         protected CommonWidthSlider()
         {
             this.MaxValue = 9;
-            this.MinValue = 1;
+            //this.MinValue = 1;
             this.TickFrequency = 1;
             this.SnapToTick = true;
+            this.MinValue = McPlugin.Settings.GetInteger(this.Key);
             RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": base Slider.ctor(), DB");
             RhinoApp.WriteLine(this.Value + ": base Slider.ctor(), UI");
         }
@@ -1043,7 +1043,38 @@ namespace MultiCut
     #endregion
     #region Assitant Point UI Group
     
+    public sealed class APEnableCheck : EnableCheckBox
+    {
+        protected override string Key => SettingKey.AssistantPoint_EnableCheck;
+        protected override Control[] ControlArray => new Control[]{APDropDown.Instance};
+        protected override CheckBox ColorCheck => APColorCheck.Instance;
+        protected override ColorPicker ColorPick => APColorPicker.Instance;
+        protected override CheckBox WidthCheck => APWidthCheck.Instance;
+        protected override Slider SizeSlide => null;
+        public static APEnableCheck Instance { get; } = new APEnableCheck();
+        private APEnableCheck(){}
 
+        protected override void EnableSubSettings()
+        {
+            bool value = MethodCollection.SafeCast(this.Checked);
+            // MCT Setting //
+            McPref.IsPointEnabled = value;
+            
+            base.EnableSubSettings();
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            this.EnableSubSettings();
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            this.EnableSubSettings();
+            base.OnCheckedChanged(e);
+        }
+    }
 
     public sealed class APDropDown : CommonDropDown
     {
@@ -1111,33 +1142,11 @@ namespace MultiCut
         }
     }
     
-    public sealed class APWidthSilder : CommonWidthSlider
-    {
-        protected override string Key => SettingKey.AssistantPoint_SizePick;
-        protected override int DefaultWidth => McPref.defaultPointSize;
-        public static APWidthSilder Instance { get; } = new APWidthSilder();
-
-        private APWidthSilder()
-        {
-            RhinoApp.WriteLine(this.Value + ": this Slider.ctor(), UI");
-            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": this Slider.ctor(), DB");
-        }
-
-        protected override void OnValueChanged(EventArgs e)
-        { 
-            RhinoApp.WriteLine(this.Value + ": this Slider.OnValueChanged(e), UI");
-            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": this Slider.OnValueChanged(e), DB");
-            McPref.PointSize = this.Value;
-            
-            base.OnValueChanged(e);
-        }
-    }
-
     public sealed class APWidthCheck : WidthCheckBox
     {
         protected override string Key => SettingKey.AssistantPoint_SizeCheck;
         protected override CheckBox UpperCheck => APEnableCheck.Instance;
-        protected override Slider WidthSlider => APWidthSilder.Instance;
+        protected override Slider WidthSlider => null;
         protected override string WidthKey => SettingKey.AssistantPoint_SizePick;
         protected override int DefaultWidth => McPref.defaultPointSize;
         public static APWidthCheck Instance { get; } = new APWidthCheck();
@@ -1176,39 +1185,7 @@ namespace MultiCut
     }
 
  
-    public sealed class APEnableCheck : EnableCheckBox
-    {
-        protected override string Key => SettingKey.AssistantPoint_EnableCheck;
-        protected override Control[] ControlArray => new Control[]{APDropDown.Instance};
-        protected override CheckBox ColorCheck => APColorCheck.Instance;
-        protected override ColorPicker ColorPick => APColorPicker.Instance;
-        protected override CheckBox WidthCheck => APWidthCheck.Instance;
-        protected override Slider SizeSlide => APWidthSilder.Instance;
-        public static APEnableCheck Instance { get; } = new APEnableCheck();
-        private APEnableCheck(){}
-
-        protected override void EnableSubSettings()
-        {
-            bool value = MethodCollection.SafeCast(this.Checked);
-            // MCT Setting //
-            McPref.IsPointEnabled = value;
-            
-            base.EnableSubSettings();
-        }
-
-        protected override void OnLoad(EventArgs e)
-        {
-            this.EnableSubSettings();
-            base.OnLoad(e);
-        }
-
-        protected override void OnCheckedChanged(EventArgs e)
-        {
-            this.EnableSubSettings();
-            base.OnCheckedChanged(e);
-        }
-    }
-
+    
     #endregion
 
     public interface IGroupCommon
