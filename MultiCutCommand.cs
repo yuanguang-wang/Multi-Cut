@@ -110,6 +110,10 @@ namespace MultiCut
                 };
                 this.FromObj.Show();
             }
+            else
+            {
+                RhinoApp.WriteLine("Multi-Cut Preference Window has already opened.");
+            }
             
             return Result.Success;
         }

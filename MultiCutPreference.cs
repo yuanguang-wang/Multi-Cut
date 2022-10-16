@@ -40,10 +40,11 @@ namespace MultiCut
     public class MultiCutPreference 
     {
         #region ATTR
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         
         public readonly Color defaultProphetColor = Colors.LimeGreen;
         public readonly Color defaultOctopusColor = Colors.Blue;
-        public readonly Color defaultPointColor = Colors.Red;
+        public readonly Color defaultPointColor = Colors.Blue;
         public int defaultPointSize => (int) MethodCollection.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.PointRadius;
         public int defaultLineWidth => MethodCollection.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
@@ -123,12 +124,16 @@ namespace MultiCut
             this.OctopusWidth = this.LoadIntSetting(SettingKey.OctopusLine_WidthSlide, PlugInSettings, 2);
             
             this.IsPointEnabled = this.LoadBoolSetting(SettingKey.AssistantPoint_EnableCheck, PlugInSettings, false);
-            this.PointNumber = this.LoadIntSetting(SettingKey.AssistantPoint_PointNumber, PlugInSettings, 3);
+            this.PointNumber = this.LoadIntSetting(SettingKey.AssistantPoint_PointNumber, PlugInSettings, 3) + 1;
             this.LoadBoolSetting(SettingKey.AssistantPoint_ColorCheck, PlugInSettings, false);
-            this.PointColor = this.LoadColorSetting(SettingKey.AssistantPoint_ColorPick, PlugInSettings,
-                this.defaultPointColor.ToSystemDrawing());
+            this.PointColor = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_ColorCheck)
+                ? this.LoadColorSetting(SettingKey.AssistantPoint_ColorPick, PlugInSettings,
+                this.defaultPointColor.ToSystemDrawing())
+                : this.defaultPointColor.ToSystemDrawing();
             this.LoadBoolSetting(SettingKey.AssistantPoint_SizeCheck, PlugInSettings, false);
-            this.PointSize = this.LoadIntSetting(SettingKey.AssistantPoint_SizePick, PlugInSettings, 2);
+            this.PointSize = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_SizeCheck)
+                ? this.LoadIntSetting(SettingKey.AssistantPoint_SizePick, PlugInSettings, 2)
+                : this.defaultPointSize;
         }
         
         #endregion
@@ -165,10 +170,10 @@ namespace MultiCut
             this.PreferenceLayout.Spacing = new Size(10,10);
             
             IEnumerable<GroupBox> controls_1 = new GroupBox[] { this.General, this.About, this.OctopusLine };
-            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.AssistantPoint, };//this.PredictionLine };
+            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.AssistantPoint, this.PredictionLine };
             
             this.PreferenceLayout.BeginHorizontal();
-            this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, null);
+            this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, controls_1);
             this.PreferenceLayout.AddSeparateColumn(new Padding(5,10,10,10), 10, false, false, controls_2);
             this.PreferenceLayout.EndHorizontal();
 
@@ -774,6 +779,7 @@ namespace MultiCut
                 APColorCheck.Instance, 
                 APColorPicker.Instance,
                 APWidthCheck.Instance,
+                APWidthDropDown.Instance
             };
             this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, controls);
         }
@@ -788,7 +794,7 @@ namespace MultiCut
         protected abstract CheckBox ColorCheck { get; }
         protected abstract ColorPicker ColorPick { get; }
         protected abstract CheckBox WidthCheck { get; }
-        protected abstract Slider SizeSlide { get; }
+        protected abstract DropDown WidthDropDown { get; }
         private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
 
@@ -816,7 +822,7 @@ namespace MultiCut
         {
             // UI Setting //
             this.ColorPick.Enabled = MethodCollection.DoubleCheck(this.Checked, this.ColorCheck.Checked);
-            this.SizeSlide.Enabled = MethodCollection.DoubleCheck(this.Checked, this.WidthCheck.Checked);
+            this.WidthDropDown.Enabled = MethodCollection.DoubleCheck(this.Checked, this.WidthCheck.Checked);
         }
 
         protected override void OnLoad(EventArgs e)
@@ -928,7 +934,7 @@ namespace MultiCut
     {
         protected abstract string Key { get; }
         protected abstract CheckBox UpperCheck { get; }
-        protected abstract Slider WidthSlider { get; }
+        protected abstract DropDown WidthDropDwon { get; }
         protected abstract string WidthKey { get; }
         protected abstract int DefaultWidth { get; }
         protected MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
@@ -937,19 +943,19 @@ namespace MultiCut
         protected WidthCheckBox()
         {
             this.ThreeState = false;
-            RhinoApp.WriteLine(WidthSlider.Value + ": base WidthCheckBox.ctor(), UI");
-            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": base WidthCheckBox.ctor(), DB");
+            //RhinoApp.WriteLine(WidthSlider.Value + ": base WidthCheckBox.ctor(), UI");
+            //RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": base WidthCheckBox.ctor(), DB");
         }
 
         protected virtual void EnableSubSetting()
         {  
             // UI Setting //
-            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": base WidthCheckBox.EnableSubSetting(), DB");
-            RhinoApp.WriteLine(this.WidthSlider.Value + ": base WidthCheckBox.EnableSubSetting(), UI");
-            this.WidthSlider.Enabled = MethodCollection.DoubleCheck(this.Checked, this.UpperCheck.Checked);
-            this.WidthSlider.Value = MethodCollection.SafeCast(this.Checked)
+            //RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": base WidthCheckBox.EnableSubSetting(), DB");
+            //RhinoApp.WriteLine(this.WidthSlider.Value + ": base WidthCheckBox.EnableSubSetting(), UI");
+            this.WidthDropDwon.Enabled = MethodCollection.DoubleCheck(this.Checked, this.UpperCheck.Checked);
+            this.WidthDropDwon.SelectedIndex = MethodCollection.SafeCast(this.Checked)
                 ? McPlugin.Settings.GetInteger(this.WidthKey)
-                : this.DefaultWidth;
+                : this.DefaultWidth - 1;
         }
         
         protected override void OnLoad(EventArgs e)
@@ -995,34 +1001,27 @@ namespace MultiCut
         }
     }
 
-    public abstract class CommonWidthSlider : Slider
+    public abstract class WidthDropDown : DropDown
     {
         protected abstract string Key { get; }
         protected abstract int DefaultWidth { get; }
         protected MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
 
-        protected CommonWidthSlider()
-        {
-            this.MaxValue = 9;
-            //this.MinValue = 1;
-            this.TickFrequency = 1;
-            this.SnapToTick = true;
-            this.MinValue = McPlugin.Settings.GetInteger(this.Key);
-            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": base Slider.ctor(), DB");
-            RhinoApp.WriteLine(this.Value + ": base Slider.ctor(), UI");
+        protected WidthDropDown()
+        { 
+            IEnumerable<object> PointNumbers = new List<object>() {1,2,3,4,5,6,7,8,9,10};
+            this.DataStore = PointNumbers;
         }
 
-        protected override void OnValueChanged(EventArgs e)
+        protected override void OnSelectedIndexChanged(EventArgs e)
         {
-            if (this.Value != this.DefaultWidth)
+            if (this.SelectedIndex + 1 != this.DefaultWidth)
             {
-                RhinoApp.WriteLine(this.Value + ": base Slider.OnValueChanged(e), UI");
-                RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.Key) + ": base Slider.OnValueChanged(e), DB");
-                McPlugin.Settings.SetInteger(this.Key, this.Value); // set DB //
+                McPlugin.Settings.SetInteger(this.Key, this.SelectedIndex); // set DB //
                 McPlugin.SaveSettings();
             }
-            base.OnValueChanged(e);
+            base.OnSelectedIndexChanged(e);
         }
     }
     
@@ -1036,8 +1035,7 @@ namespace MultiCut
         protected override CheckBox ColorCheck => null;
         protected override ColorPicker ColorPick => null;
         protected override CheckBox WidthCheck => null;
-        protected override Slider SizeSlide => null;
-
+        protected override DropDown WidthDropDown => null;
     }
 
     #endregion
@@ -1050,7 +1048,7 @@ namespace MultiCut
         protected override CheckBox ColorCheck => APColorCheck.Instance;
         protected override ColorPicker ColorPick => APColorPicker.Instance;
         protected override CheckBox WidthCheck => APWidthCheck.Instance;
-        protected override Slider SizeSlide => null;
+        protected override DropDown WidthDropDown => APWidthDropDown.Instance;
         public static APEnableCheck Instance { get; } = new APEnableCheck();
         private APEnableCheck(){}
 
@@ -1146,7 +1144,7 @@ namespace MultiCut
     {
         protected override string Key => SettingKey.AssistantPoint_SizeCheck;
         protected override CheckBox UpperCheck => APEnableCheck.Instance;
-        protected override Slider WidthSlider => null;
+        protected override DropDown WidthDropDwon => APWidthDropDown.Instance;
         protected override string WidthKey => SettingKey.AssistantPoint_SizePick;
         protected override int DefaultWidth => McPref.defaultPointSize;
         public static APWidthCheck Instance { get; } = new APWidthCheck();
@@ -1154,8 +1152,6 @@ namespace MultiCut
         private APWidthCheck()
         {
             this.Text = "Customize PointSize";
-            RhinoApp.WriteLine(this.WidthSlider.Value + ": this Check.ctor(), UI");
-            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey) + ": this Check.ctor(), DB");
         }
 
         protected override void EnableSubSetting()
@@ -1165,8 +1161,6 @@ namespace MultiCut
             McPref.PointSize = MethodCollection.SafeCast(this.Checked)
                 ? McPlugin.Settings.GetInteger(this.WidthKey)
                 : this.DefaultWidth;
-            RhinoApp.WriteLine(this.WidthSlider.Value.ToString() + ": this Check.EnableSubSetting(), UI");
-            RhinoApp.WriteLine(McPlugin.Settings.GetInteger(this.WidthKey).ToString() + ": this Check.EnableSubSetting(), DB");
         }
 
         protected override void OnLoad(EventArgs e)
@@ -1183,9 +1177,20 @@ namespace MultiCut
             base.OnCheckedChanged(e);
         }
     }
-
- 
     
+    public sealed class APWidthDropDown : WidthDropDown
+    {
+        protected override string Key => SettingKey.AssistantPoint_SizePick;
+        protected override int DefaultWidth => McPref.defaultPointSize;
+        public static APWidthDropDown Instance { get; } = new APWidthDropDown();
+        private APWidthDropDown() { }
+        protected override void OnSelectedIndexChanged(EventArgs e)
+        {
+            base.OnSelectedIndexChanged(e);
+            McPref.PointSize = this.SelectedIndex + 1;
+        }
+    }
+
     #endregion
 
     public interface IGroupCommon
