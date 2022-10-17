@@ -635,7 +635,7 @@ namespace MultiCut
         public void MouseMoveBaseBundle()
         {
             this.CurrentFaceFinder();
-            if (this.McPref.IsProphetChecked)
+            if (this.McPref.IsProphetEnabled)
             {
                 this.ProphetGenerator();
             }
@@ -770,7 +770,7 @@ namespace MultiCut
 
         public void CutOperation()
         {
-            if (McPref.IsPriorityChecked & McPref.IsProphetChecked)
+            if (McPref.IsPriorityChecked & McPref.IsProphetEnabled)
             {
                 this.CutByProphet();
             }
