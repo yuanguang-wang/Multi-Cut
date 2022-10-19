@@ -15,7 +15,6 @@ namespace MultiCut
     
     internal static class MethodCollection
     {
-        public static RhinoDoc CurrentDoc { get; set; }
 
         #region Core Method
         
@@ -657,7 +656,7 @@ namespace MultiCut
             }
             
             bool trinityBool = !McPref.IsIsoChecked & !McPref.IsCplChecked & !McPref.IsWplChecked;
-            if (!McPref.IsOctopusChecked | trinityBool)
+            if (!McPref.IsOctopusEnabled | trinityBool)
             {
                 this.OctopusCascade = new Dictionary<Curve, string>();
                 return;
@@ -713,7 +712,7 @@ namespace MultiCut
             }
             else
             {
-                if (this.McPref.IsSplitChecked)
+                if (this.McPref.IsSplitEnabled)
                 {
                     RhinoApp.WriteLine("Brep splitted");
                     foreach (Brep brep in newBrepArray)
@@ -770,7 +769,7 @@ namespace MultiCut
 
         public void CutOperation()
         {
-            if (McPref.IsPriorityChecked & McPref.IsProphetEnabled)
+            if (McPref.IsPriorityEnabled & McPref.IsProphetEnabled)
             {
                 this.CutByProphet();
             }
@@ -809,6 +808,7 @@ namespace MultiCut
 
         protected override void OnDynamicDraw(GetPointDrawEventArgs e)
         {
+            base.OnDynamicDraw(e);
             
             if (coreObj.ProphetCrvs != null)
             {
@@ -824,14 +824,9 @@ namespace MultiCut
                 this.AddConstructionPoints(coreObj.AssistPtList);
                 e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, McPref.PointColor);
             }
-            else
-            {
-                this.ClearConstructionPoints();
-            }
             
             e.Display.DrawPoint(coreObj.CurrentPt, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, System.Drawing.Color.Black);
             
-            base.OnDynamicDraw(e);
         }
     }
 
@@ -865,6 +860,8 @@ namespace MultiCut
 
         protected override void OnDynamicDraw(GetPointDrawEventArgs e)
         {
+            base.OnDynamicDraw(e);
+            
             if (coreObj.OctopusCascade != null)
             {
                 foreach (Curve crv in coreObj.OctopusCascade.Keys)
@@ -889,7 +886,6 @@ namespace MultiCut
                 e.Display.DrawCurve(crv, System.Drawing.Color.CornflowerBlue,  this.McPref.OctopusWidth);
             }
 
-            base.OnDynamicDraw(e);
         }
     }
 

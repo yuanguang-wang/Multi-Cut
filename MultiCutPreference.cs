@@ -17,23 +17,23 @@ namespace MultiCut
         public const string PredictionLine_EnableCheck = "PredictionLineEnabledCheck";
         public const string PredictionLine_PriorityCheck = "PredictionLinePriorityCheck";
         public const string PredictionLine_ColorCheck = "PredictionLineColorCheck";
-        public const string PredictionLine_ColorCustom = "PredictionLineColorCustom";
+        public const string PredictionLine_ColorPick = "PredictionLineColorCustom";
         public const string PredictionLine_WidthCheck = "PredictionLineWidthCheck";
-        public const string PredictionLine_WidthSlide = "PredictionLineWidthSlide";
+        public const string PredictionLine_WidthDropDown = "PredictionLineWidthSlide";
         public const string OctopusLine_EnableCheck = "OctopusLineEnableCheck";
         public const string OctopusLine_ISOCheck = "OctopusLineIsoCheck";
         public const string OctopusLine_CPLCheck = "OctopusLineCLPCheck";
         public const string OctopusLine_WPLCheck = "OctopusLineWLPCheck";
         public const string OctopusLine_ColorCheck = "OctopusLineColorCheck";
-        public const string OctopusLine_ColorCustom = "OctopusLineColorCustom";
+        public const string OctopusLine_ColorPick = "OctopusLineColorCustom";
         public const string OctopusLine_WidthCheck = "OctopusLineWidthCheck";
-        public const string OctopusLine_WidthSlide = "OctopusLineWidthSlide";
+        public const string OctopusLine_WidthDropDown = "OctopusLineWidthSlide";
         public const string AssistantPoint_EnableCheck = "AssistantPointEnableCheck";
         public const string AssistantPoint_PointNumber = "AssistantPointNumber";
         public const string AssistantPoint_ColorCheck = "AssistantPointColorCheck";
         public const string AssistantPoint_ColorPick = "AssistantPointColorPick";
         public const string AssistantPoint_SizeCheck = "AssistantPointSizeCheck";
-        public const string AssistantPoint_SizePick = "AssistantPointSizePick";
+        public const string AssistantPoint_SizeDropDown = "AssistantPointSizePick";
     }
     
     public class MultiCutPreference 
@@ -47,12 +47,12 @@ namespace MultiCut
         public int defaultPointSize => (int) RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.PointRadius;
         public int defaultLineWidth => RhinoDoc.ActiveDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
         private PersistentSettings PlugInSettings => MultiCutPlugin.Instance.Settings;
-        public bool IsSplitChecked { get; set; }
+        public bool IsSplitEnabled { get; set; }
         public bool IsProphetEnabled { get; set; }
-        public bool IsPriorityChecked { get; set; }
+        public bool IsPriorityEnabled { get; set; }
         public System.Drawing.Color ProphetColor { get; set; }
         public int ProphetWidth { get; set; }
-        public bool IsOctopusChecked { get; set; }
+        public bool IsOctopusEnabled { get; set; }
         public bool IsIsoChecked { get; set; }
         public bool IsCplChecked { get; set; }
         public bool IsWplChecked { get; set; }
@@ -102,32 +102,32 @@ namespace MultiCut
         /// </summary>
         public void LoadSettingBundle()
         {
-            this.IsSplitChecked = this.LoadBoolSetting(SettingKey.General_SplitCheck, PlugInSettings, false);
+            this.IsSplitEnabled = this.LoadBoolSetting(SettingKey.General_SplitCheck, PlugInSettings, false);
             
             this.IsProphetEnabled = this.LoadBoolSetting(SettingKey.PredictionLine_EnableCheck, PlugInSettings, true);
-            this.IsPriorityChecked = this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
+            this.IsPriorityEnabled = this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
             this.LoadBoolSetting(SettingKey.PredictionLine_ColorCheck, PlugInSettings, false);
             this.ProphetColor = McPlugin.Settings.GetBool(SettingKey.PredictionLine_ColorCheck)
-                ? this.LoadColorSetting(SettingKey.PredictionLine_ColorCustom, PlugInSettings, 
+                ? this.LoadColorSetting(SettingKey.PredictionLine_ColorPick, PlugInSettings, 
                 this.defaultProphetColor.ToSystemDrawing())
                 : this.defaultProphetColor.ToSystemDrawing();
             this.LoadBoolSetting(SettingKey.PredictionLine_WidthCheck, PlugInSettings, false);
             this.ProphetWidth = McPlugin.Settings.GetBool(SettingKey.PredictionLine_WidthCheck)
-                ? this.LoadIntSetting(SettingKey.PredictionLine_WidthSlide, PlugInSettings, 2) + 1
+                ? this.LoadIntSetting(SettingKey.PredictionLine_WidthDropDown, PlugInSettings, 2) + 1
                 : this.defaultLineWidth;
             
-            this.IsOctopusChecked = this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
+            this.IsOctopusEnabled = this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
             this.IsIsoChecked = this.LoadBoolSetting(SettingKey.OctopusLine_ISOCheck, PlugInSettings, true);
             this.IsCplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_CPLCheck, PlugInSettings, true);
             this.IsWplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_WPLCheck, PlugInSettings, true);
             this.LoadBoolSetting(SettingKey.OctopusLine_ColorCheck, PlugInSettings, false);
             this.OctopusColor = McPlugin.Settings.GetBool(SettingKey.OctopusLine_ColorCheck)
-                ? this.LoadColorSetting(SettingKey.OctopusLine_ColorCustom, PlugInSettings,
+                ? this.LoadColorSetting(SettingKey.OctopusLine_ColorPick, PlugInSettings,
                 this.defaultOctopusColor.ToSystemDrawing())
                 : this.defaultOctopusColor.ToSystemDrawing();
             this.LoadBoolSetting(SettingKey.OctopusLine_WidthCheck, PlugInSettings, false);
             this.OctopusWidth = McPlugin.Settings.GetBool(SettingKey.OctopusLine_WidthCheck)
-                ? this.LoadIntSetting(SettingKey.OctopusLine_WidthSlide, PlugInSettings, 2) + 1
+                ? this.LoadIntSetting(SettingKey.OctopusLine_WidthDropDown, PlugInSettings, 2) + 1
                 : this.defaultLineWidth;
             
             this.IsPointEnabled = this.LoadBoolSetting(SettingKey.AssistantPoint_EnableCheck, PlugInSettings, false);
@@ -139,7 +139,7 @@ namespace MultiCut
                 : this.defaultPointColor.ToSystemDrawing();
             this.LoadBoolSetting(SettingKey.AssistantPoint_SizeCheck, PlugInSettings, false);
             this.PointSize = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_SizeCheck)
-                ? this.LoadIntSetting(SettingKey.AssistantPoint_SizePick, PlugInSettings, 2) + 1
+                ? this.LoadIntSetting(SettingKey.AssistantPoint_SizeDropDown, PlugInSettings, 2) + 1
                 : this.defaultPointSize;
         }
         
@@ -181,7 +181,7 @@ namespace MultiCut
             
             this.PreferenceLayout.BeginHorizontal();
             this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, controls_1);
-            this.PreferenceLayout.AddSeparateColumn(new Padding(5,10,10,10), 10, false, false, controls_2);
+            this.PreferenceLayout.AddSeparateColumn(new Padding(5,10,10,10), 13, false, false, controls_2);
             this.PreferenceLayout.EndHorizontal();
 
         }
@@ -197,47 +197,21 @@ namespace MultiCut
 
     public class GeneralBox : GroupBox, IGroupCommon
     {
-        public RhinoDoc CurrentDoc => MethodCollection.CurrentDoc;
-        public MultiCutPreference McPref => MultiCutPreference.Instance;
-        public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
         public static GeneralBox Instance { get; } = new GeneralBox();
-        private CheckBox SplitCheck { get; set; }
 
         private GeneralBox()
         {
             this.Text = "General";
             this.Padding = new Padding(10);
-            
-            this.SetSplitCheck();
             this.SetGroupLayout();
-
             this.Content = this.GroupBoxLayout;
 
         }
-
-        private void SetSplitCheck()
-        {
-            this.SplitCheck = new CheckBox(){Text = "Split if possible", ThreeState = false};
-            this.SplitCheck.Load += (sender, args) =>
-            { 
-                bool isSplitted = this.McPlugin.Settings.GetBool(SettingKey.General_SplitCheck);
-                this.SplitCheck.Checked = isSplitted;
-            };
-            this.SplitCheck.CheckedChanged += (sender, args) =>
-            {
-                // ReSharper disable once PossibleInvalidOperationException
-                bool isChecked = (bool)this.SplitCheck.Checked;
-                this.McPref.IsSplitChecked = isChecked;
-                this.McPlugin.Settings.SetBool(SettingKey.General_SplitCheck, isChecked);
-                this.McPlugin.SaveSettings();
-            };
-        }
-
         public void SetGroupLayout()
         {
             this.GroupBoxLayout = new DynamicLayout();
-            this.GroupBoxLayout.AddRow(this.SplitCheck);
+            this.GroupBoxLayout.AddRow(SplitCheck.Instance);
         }
 
     }
@@ -246,7 +220,9 @@ namespace MultiCut
     {
         public static AboutBox Instance { get; } = new AboutBox();
         private DynamicLayout AboutBoxLayout { get; set; }
+        private Label GitHubLabel { get; set; }
         private LinkButton GithubLink { get; set; }
+        private Label WebsiteLabel { get; set; }
         private LinkButton WebsiteLink { get; set; }
 
         private AboutBox()
@@ -261,8 +237,9 @@ namespace MultiCut
         private void SetLinkButton()
         {
             // Git Link //
+            this.GitHubLabel = new Label() { Text = "Documentation on:" };
             this.GithubLink = new LinkButton();
-            this.GithubLink.Text = "Documentation on Github";
+            this.GithubLink.Text = "Github/yuanguang-wang";
             this.GithubLink.Click += (sender, args) =>
             {
                 PythonScript ps = PythonScript.Create();
@@ -270,20 +247,29 @@ namespace MultiCut
             };
             
             // Web Link //
+            this.WebsiteLabel = new Label() { Text = "Find More on:" };
             this.WebsiteLink = new LinkButton();
-            this.WebsiteLink.Text = "Find more Utilities";
+            this.WebsiteLink.Text = "elderaven.com";
             this.WebsiteLink.Click += (sender, args) =>
             {
                 PythonScript ps = PythonScript.Create();
                 ps.ExecuteScript("import webbrowser; webbrowser.open('https://elderaven.com')");
             }; 
+            
+            // CP //
+            
         }
         private void SetGroupLayout()
         {
+            Label versiontitle = new Label() { Text = "Version:  1.0.0" };
+            
             this.AboutBoxLayout = new DynamicLayout();
             IEnumerable<Control> controls = new Control[]
             {
+                versiontitle,
+                this.GitHubLabel,
                 this.GithubLink,
+                this.WebsiteLabel,
                 this.WebsiteLink
             };
             this.AboutBoxLayout.AddSeparateColumn(AboutBoxLayout.DefaultPadding,13, false, false, controls);
@@ -321,9 +307,6 @@ namespace MultiCut
 
     public class OctopusLineBox : GroupBox, IGroupCommon
     {
-        public RhinoDoc CurrentDoc => MethodCollection.CurrentDoc;
-        public MultiCutPreference McPref => MultiCutPreference.Instance;
-        public MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public DynamicLayout GroupBoxLayout { get; set; }
         public static OctopusLineBox Instance { get; } = new OctopusLineBox();
 
@@ -334,205 +317,20 @@ namespace MultiCut
             this.SetGroupLayout();
             this.Content = this.GroupBoxLayout;
         }
-
-        #region EnableCheck
-
-        private CheckBox EnableCheck { get; set; }
-        private void SetEnableCheck()
-        {
-            this.EnableCheck = new CheckBox(){ Text = "Enable", ThreeState = false };
-            this.EnableCheck.Load += (sender, args) =>
-            {
-                this.EnableCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_EnableCheck); // get DB //
-            };
-            this.EnableCheck.CheckedChanged += (sender, args) =>
-            {
-                McPlugin.Settings.SetBool(SettingKey.OctopusLine_EnableCheck, MethodCollection.SafeCast(EnableCheck.Checked)); // set DB //
-                McPref.IsOctopusChecked = MethodCollection.SafeCast(EnableCheck.Checked); // Notify MCT //
-            };
-            this.EnableCheck.CheckedChanged += this.EnableSubOptions;
-        }
-        private void EnableSubOptions(object sender, EventArgs e)
-        {
-            bool value = MethodCollection.SafeCast(this.EnableCheck.Checked);
-            this.ISOCheck.Enabled = value;
-            this.WPLCheck.Enabled = value;
-            this.CPLCheck.Enabled = value;
-            this.ColorCheck.Enabled = value;
-            this.WidthCheck.Enabled = value;
-            bool isColorPickEnabled = MethodCollection.DoubleCheck(value, this.ColorCheck.Checked);
-            this.ColorPick.Enabled = isColorPickEnabled;
-            bool isWidthSlideEnabled = MethodCollection.DoubleCheck(value, this.WidthCheck.Checked);
-            this.WidthSlide.Enabled = isWidthSlideEnabled;
-        }
-
-        #endregion
-        #region SubCheck
-
-        private CheckBox ISOCheck { get; set; }
-        private void SetIsoCheck()
-        {
-            this.ISOCheck = new CheckBox(){ Text = "Isocurve Intersect", ThreeState = false };
-            this.ISOCheck.Load += (sender, args) =>
-            {
-                this.ISOCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_ISOCheck); // Get DB //
-            };
-            this.ISOCheck.CheckedChanged += (sender, args) =>
-            {
-                bool value = MethodCollection.SafeCast(this.ISOCheck.Checked);
-                McPlugin.Settings.SetBool(SettingKey.OctopusLine_ISOCheck, value); // Set DB //
-                McPref.IsIsoChecked = value; // Notify MCT//
-            };
-        }
-
-        private CheckBox CPLCheck { get; set; }
-        private void SetCplChecked()
-        {
-           this.CPLCheck = new CheckBox(){ Text = "CPlane Intersect", ThreeState = false };
-           this.CPLCheck.Load += (sender, args) =>
-           {
-               this.CPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_CPLCheck); // get DB //
-           };
-           this.CPLCheck.Load += (sender, args) =>
-           {
-               bool value = MethodCollection.SafeCast(this.CPLCheck.Checked);
-               McPlugin.Settings.SetBool(SettingKey.OctopusLine_CPLCheck, value); // Set DB //
-               McPref.IsCplChecked = value; // Notify MCT //
-           };
-        }
-
-        private CheckBox WPLCheck { get; set; }
-        private void SetWplChecked()
-        {
-            this.WPLCheck = new CheckBox(){ Text = "WPlane Intersect", ThreeState = false };
-            this.WPLCheck.Load += (sender, args) =>
-            {
-                this.WPLCheck.Checked = McPlugin.Settings.GetBool(SettingKey.OctopusLine_WPLCheck); // get DB //
-            };
-            this.WPLCheck.CheckedChanged += (sender, args) =>
-            {
-                bool value = MethodCollection.SafeCast(this.WPLCheck.Checked);
-                this.McPlugin.Settings.SetBool(SettingKey.OctopusLine_WPLCheck, value); // Set DB //
-                this.McPref.IsWplChecked = value; // Notify MCT //
-            };
-        }
-
-        #endregion
-        #region ColorSet
-
-        private CheckBox ColorCheck { get; set; }
-        private void SetColorCheck()
-        {
-            this.ColorCheck = new CheckBox(){ Text = "Customize Color", ThreeState = false };
-            this.ColorCheck.Load += (sender, args) =>
-            {
-                this.ColorCheck.Checked = this.McPlugin.Settings.GetBool(SettingKey.OctopusLine_ColorCheck); // get DB //
-            };
-            this.ColorCheck.CheckedChanged += (sender, args) =>
-            {
-                bool value = MethodCollection.SafeCast(this.ColorCheck.Checked);
-                this.McPlugin.Settings.SetBool(SettingKey.OctopusLine_ColorCheck, value); // set DB //
-               
-                // Control the behavior of ColorPick //
-                bool doubleValue = MethodCollection.DoubleCheck(value, this.EnableCheck.Checked);
-                Color color = value
-                    ? this.McPlugin.Settings.GetColor(SettingKey.OctopusLine_ColorCustom).ToEto() // dispatch Color //
-                    : this.DefaultOctopusColor;
-                this.ColorPick.Enabled = doubleValue;
-                this.ColorPick.Value = color;
-                this.McPref.OctopusColor = color.ToSystemDrawing();
-            };
-        }
-
-        private Color DefaultOctopusColor => this.McPref.defaultOctopusColor;
-        private ColorPicker ColorPick { get; set; }
-        private void SetColorPick()
-        {
-            this.ColorPick = new ColorPicker() { Value = this.DefaultOctopusColor };
-            this.ColorPick.Load += (sender, args) =>
-            {
-                this.ColorPick.Value = this.McPlugin.Settings.GetColor(SettingKey.OctopusLine_ColorCustom).ToEto();
-            };
-            this.ColorPick.ValueChanged += (sender, args) =>
-            {
-                Color color = this.ColorPick.Value;
-                if (color != this.DefaultOctopusColor)
-                {
-                    this.McPlugin.Settings.SetColor(SettingKey.OctopusLine_ColorCustom,color.ToSystemDrawing());
-                    this.McPref.OctopusColor = color.ToSystemDrawing();
-                }
-            };
-        }
-
-
-        #endregion
-        #region WidthSet
-        private CheckBox WidthCheck { get; set; }
-        private void SetWidthCheck()
-        {
-            this.WidthCheck = new CheckBox() { Text = "Customize LineWidth", ThreeState = false };
-            this.WidthCheck.Load += (sender, args) =>
-            {
-                this.WidthCheck.Checked = this.McPlugin.Settings.GetBool(SettingKey.OctopusLine_WidthCheck); // get DB //
-            };
-            this.WidthCheck.CheckedChanged += (sender, args) =>
-            {
-                bool value = MethodCollection.SafeCast(this.WidthCheck.Checked);
-                this.McPlugin.Settings.SetBool(SettingKey.OctopusLine_WidthCheck, value); // set DB //
-                
-                // Control Behavior //
-                bool doubleCheck = MethodCollection.DoubleCheck(value, this.EnableCheck.Checked);
-                this.WidthSlide.Enabled = doubleCheck;
-                this.McPref.OctopusWidth = doubleCheck ? this.WidthSlide.Value : this.DisplayThickness;
-            };
-        }
-        private int DisplayThickness => MethodCollection.CurrentDoc.Views.ActiveView.DisplayPipeline.DisplayPipelineAttributes.CurveThickness;
-        private Slider WidthSlide { get; set; }
-        private void SetWidthSlide()
-        {
-            this.WidthSlide = new Slider()            
-            {
-                MaxValue = 9,
-                MinValue = 1,
-                Value = 3,
-                TickFrequency = 1,
-                SnapToTick = true
-            };
-            this.WidthSlide.Load += (sender, args) =>
-            {
-                this.WidthSlide.Value = this.McPlugin.Settings.GetInteger(SettingKey.OctopusLine_WidthSlide); // get DB //
-            };
-            this.WidthSlide.ValueChanged += (sender, args) =>
-            {
-                this.McPlugin.Settings.SetInteger(SettingKey.OctopusLine_WidthSlide, this.WidthSlide.Value); // set DB //
-                this.McPref.OctopusWidth = this.WidthSlide.Value; // Notify MCT //
-            };
-        }
-
-        #endregion
         
         public void SetGroupLayout()
         {
-            this.SetEnableCheck();
-            this.SetIsoCheck(); 
-            this.SetCplChecked();
-            this.SetWplChecked();
-            this.SetColorCheck();
-            this.SetColorPick();
-            this.SetWidthCheck();
-            this.SetWidthSlide();
-            
             this.GroupBoxLayout = new DynamicLayout();
+
+            SubGroupBox OLSubGroup =
+                new SubGroupBox(new Control[] { ISOCheck.Instance, CPLCheck.Instance, WPLCheck.Instance }, "Intersection");
+            CustomizationGroup OLCustom = new CustomizationGroup(new Control[] 
+                { OLColorCheck.Instance, OLColorPicker.Instance, OLWidthCheck.Instance, OLWidthDropDown.Instance });
             IEnumerable<Control> predictionControls = new Control[]
             {
-                this.EnableCheck,
-                this.ISOCheck,
-                this.CPLCheck,
-                this.WPLCheck,
-                this.ColorCheck,
-                this.ColorPick,
-                this.WidthCheck,
-                this.WidthSlide
+                OLEnableCheck.Instance, 
+                OLSubGroup,
+                OLCustom
             };
             this.GroupBoxLayout.AddSeparateColumn(new Padding(10), 10, false, false, predictionControls);
         }
@@ -821,7 +619,7 @@ namespace MultiCut
 
         protected override void OnSelectedIndexChanged(EventArgs e)
         {
-            if (this.SelectedIndex + 1 != this.DefaultWidth)
+            if (this.SelectedIndex != this.DefaultWidth - 1)
             {
                 McPlugin.Settings.SetInteger(this.Key, this.SelectedIndex); // set DB //
                 McPlugin.SaveSettings();
@@ -836,11 +634,11 @@ namespace MultiCut
     public sealed class OLEnableCheck : EnableCheckBox
     {
         protected override string Key => SettingKey.OctopusLine_EnableCheck;
-        protected override Control[] ControlArray => null;
-        protected override CheckBox ColorCheck => null;
-        protected override ColorPicker ColorPick { get; }
-        protected override CheckBox WidthCheck { get; }
-        protected override DropDown WidthDropDown { get; }
+        protected override Control[] ControlArray => new Control[] { ISOCheck.Instance, CPLCheck.Instance, WPLCheck.Instance };
+        protected override CheckBox ColorCheck => OLColorCheck.Instance;
+        protected override ColorPicker ColorPick => OLColorPicker.Instance;
+        protected override CheckBox WidthCheck => OLWidthCheck.Instance;
+        protected override DropDown WidthDropDown => OLWidthDropDown.Instance;
         public static OLEnableCheck Instance { get; } = new OLEnableCheck();
         private OLEnableCheck() { }
 
@@ -848,7 +646,7 @@ namespace MultiCut
         {
             bool value = MethodCollection.SafeCast(this.Checked);
             // MCT Setting //
-            McPref.IsProphetEnabled = value;
+            McPref.IsOctopusEnabled = value;
             
             base.EnableSubSettings();
         }
@@ -871,7 +669,11 @@ namespace MultiCut
     {
         protected override string Key => SettingKey.OctopusLine_ISOCheck;
         public static ISOCheck Instance { get; } = new ISOCheck();
-        private ISOCheck() { }
+
+        private ISOCheck()
+        {
+            this.Text = "Isocurve";
+        }
         protected override void OnCheckedChanged(EventArgs e)
         {
             base.OnCheckedChanged(e);
@@ -883,7 +685,11 @@ namespace MultiCut
     {
         protected override string Key => SettingKey.OctopusLine_CPLCheck;
         public static CPLCheck Instance { get; } = new CPLCheck();
-        private CPLCheck() { }
+
+        private CPLCheck()
+        {
+            this.Text = "CPlane";
+        }
         protected override void OnCheckedChanged(EventArgs e)
         {
             base.OnCheckedChanged(e);
@@ -895,7 +701,11 @@ namespace MultiCut
     {
         protected override string Key => SettingKey.OctopusLine_WPLCheck;
         public static WPLCheck Instance { get; } = new WPLCheck();
-        private WPLCheck() { }
+
+        private WPLCheck()
+        {
+            this.Text = "WorldPlane";
+        }
         protected override void OnCheckedChanged(EventArgs e)
         {
             base.OnCheckedChanged(e);
@@ -903,7 +713,106 @@ namespace MultiCut
         }
     }
     
+    public sealed class OLColorCheck : ColorCheckBox
+    {
+        protected override string Key => SettingKey.OctopusLine_ColorCheck;
+        protected override CheckBox UpperCheck => OLEnableCheck.Instance;
+        protected override ColorPicker ColorPick => OLColorPicker.Instance;
+        protected override string ColorKey => SettingKey.OctopusLine_ColorPick;
+        protected override Color DefaultColor => McPref.defaultOctopusColor;
+        public static OLColorCheck Instance { get; } = new OLColorCheck();
+
+        private OLColorCheck()
+        {
+            this.Text = "Line Color";
+        }
+
+        protected override void EnableSubSetting()
+        {
+            // MCT Setting //
+            McPref.OctopusColor = MethodCollection.SetMCTUIColor(
+                this.Checked,
+                this.UpperCheck.Checked,
+                McPlugin.Settings.GetColor(this.ColorKey),
+                this.DefaultColor.ToSystemDrawing()
+            );
+            this.ColorPick.Value = McPref.OctopusColor.ToEto();
+            
+            base.EnableSubSetting();
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            this.EnableSubSetting();
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            this.EnableSubSetting();
+            base.OnCheckedChanged(e);
+        }
+    }
     
+    public sealed class OLColorPicker : CommonColorPicker
+    {
+        protected override string Key => SettingKey.OctopusLine_ColorPick;
+        protected override Color DefaultColor => McPref.defaultOctopusColor;
+        public static OLColorPicker Instance { get; } = new OLColorPicker();
+        private OLColorPicker()
+        {
+            this.ValueChanged += (sender, args) => { McPref.OctopusColor = this.Value.ToSystemDrawing(); };
+        }
+    }
+    
+    public sealed class OLWidthCheck : WidthCheckBox
+    {
+        protected override string Key => SettingKey.OctopusLine_WidthCheck;
+        protected override CheckBox UpperCheck => OLEnableCheck.Instance;
+        protected override DropDown WidthDropDwon => OLWidthDropDown.Instance;
+        protected override string WidthKey => SettingKey.OctopusLine_WidthDropDown;
+        protected override int DefaultWidth => McPref.defaultLineWidth;
+        public static OLWidthCheck Instance { get; } = new OLWidthCheck();
+
+        private OLWidthCheck()
+        {
+            this.Text = "Line Width";
+        }
+
+        protected override void EnableSubSetting()
+        {
+            // MCT Setting //
+            base.EnableSubSetting();
+            McPref.OctopusWidth = MethodCollection.SafeCast(this.Checked)
+                ? McPlugin.Settings.GetInteger(this.WidthKey)
+                : this.DefaultWidth;
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            this.EnableSubSetting();
+            base.OnLoad(e);
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            this.EnableSubSetting();
+            base.OnCheckedChanged(e);
+        }
+    }
+    
+    public sealed class OLWidthDropDown : WidthDropDown
+    {
+        protected override string Key => SettingKey.OctopusLine_WidthDropDown;
+        protected override int DefaultWidth => McPref.defaultLineWidth;
+        public static OLWidthDropDown Instance { get; } = new OLWidthDropDown();
+        private OLWidthDropDown() { }
+        protected override void OnSelectedIndexChanged(EventArgs e)
+        {
+            base.OnSelectedIndexChanged(e);
+            McPref.OctopusWidth = this.SelectedIndex + 1;
+        }
+    }
 
     #endregion
     #region Prediction Line UI Group
@@ -962,7 +871,7 @@ namespace MultiCut
         protected override void OnCheckedChanged(EventArgs e)
         {
             base.OnCheckedChanged(e);
-            McPref.IsPriorityChecked = MethodCollection.SafeCast(this.Checked);
+            McPref.IsPriorityEnabled = MethodCollection.SafeCast(this.Checked);
             this.SwitchTitle();
         }
     }
@@ -972,7 +881,7 @@ namespace MultiCut
         protected override string Key => SettingKey.PredictionLine_ColorCheck;
         protected override CheckBox UpperCheck => PLEnableCheck.Instance;
         protected override ColorPicker ColorPick => PLColorPicker.Instance;
-        protected override string ColorKey => SettingKey.PredictionLine_ColorCustom;
+        protected override string ColorKey => SettingKey.PredictionLine_ColorPick;
         protected override Color DefaultColor => McPref.defaultProphetColor;
         public static PLColorCheck Instance { get; } = new PLColorCheck();
 
@@ -1010,7 +919,7 @@ namespace MultiCut
     
     public sealed class PLColorPicker : CommonColorPicker
     {
-        protected override string Key => SettingKey.PredictionLine_ColorCustom;
+        protected override string Key => SettingKey.PredictionLine_ColorPick;
         protected override Color DefaultColor => McPref.defaultProphetColor;
         public static PLColorPicker Instance { get; } = new PLColorPicker();
 
@@ -1025,7 +934,7 @@ namespace MultiCut
         protected override string Key => SettingKey.PredictionLine_WidthCheck;
         protected override CheckBox UpperCheck => PLEnableCheck.Instance;
         protected override DropDown WidthDropDwon => PLWidthDropDown.Instance;
-        protected override string WidthKey => SettingKey.PredictionLine_WidthSlide;
+        protected override string WidthKey => SettingKey.PredictionLine_WidthDropDown;
         protected override int DefaultWidth => McPref.defaultLineWidth;
         public static PLWidthCheck Instance { get; } = new PLWidthCheck();
         private PLWidthCheck()
@@ -1038,7 +947,7 @@ namespace MultiCut
             // MCT Setting //
             base.EnableSubSetting();
             McPref.ProphetWidth = MethodCollection.SafeCast(this.Checked)
-                ? McPlugin.Settings.GetInteger(this.WidthKey)
+                ? McPlugin.Settings.GetInteger(this.WidthKey) + 1
                 : this.DefaultWidth;
         }
 
@@ -1057,7 +966,7 @@ namespace MultiCut
     
     public sealed class PLWidthDropDown : WidthDropDown
     {
-        protected override string Key => SettingKey.PredictionLine_WidthSlide;
+        protected override string Key => SettingKey.PredictionLine_WidthDropDown;
         protected override int DefaultWidth => McPref.defaultLineWidth;
         public static PLWidthDropDown Instance { get; } = new PLWidthDropDown();
         private PLWidthDropDown() { }
@@ -1065,6 +974,33 @@ namespace MultiCut
         {
             base.OnSelectedIndexChanged(e);
             McPref.ProphetWidth = this.SelectedIndex + 1;
+        }
+    }
+
+    public sealed class SplitCheck : CommonCheckBox
+    {
+        protected override string Key => SettingKey.General_SplitCheck;
+        public static SplitCheck Instance { get; } = new SplitCheck();
+        private SplitCheck() { }
+
+        private void SwitchTitle()
+        {
+            this.Text = MethodCollection.SafeCast(this.Checked)
+                ? "Split if possible"
+                : "Keep Brep joined";
+        }
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            this.SwitchTitle();
+        }
+
+        protected override void OnCheckedChanged(EventArgs e)
+        {
+            base.OnCheckedChanged(e);
+            this.SwitchTitle();
+            McPref.IsSplitEnabled = MethodCollection.SafeCast(this.Checked);
         }
     }
 
@@ -1177,7 +1113,7 @@ namespace MultiCut
         protected override string Key => SettingKey.AssistantPoint_SizeCheck;
         protected override CheckBox UpperCheck => APEnableCheck.Instance;
         protected override DropDown WidthDropDwon => APWidthDropDown.Instance;
-        protected override string WidthKey => SettingKey.AssistantPoint_SizePick;
+        protected override string WidthKey => SettingKey.AssistantPoint_SizeDropDown;
         protected override int DefaultWidth => McPref.defaultPointSize;
         public static APWidthCheck Instance { get; } = new APWidthCheck();
 
@@ -1210,7 +1146,7 @@ namespace MultiCut
     
     public sealed class APWidthDropDown : WidthDropDown
     {
-        protected override string Key => SettingKey.AssistantPoint_SizePick;
+        protected override string Key => SettingKey.AssistantPoint_SizeDropDown;
         protected override int DefaultWidth => McPref.defaultPointSize;
         public static APWidthDropDown Instance { get; } = new APWidthDropDown();
         private APWidthDropDown() { }
