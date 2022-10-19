@@ -1,6 +1,7 @@
 ﻿using Rhino;
 using Rhino.Commands;
 using Rhino.Input;
+using Rhino.Input.Custom;
 
 namespace MultiCut
 {
@@ -27,6 +28,8 @@ namespace MultiCut
             }
             
             GetFirstPoint getFirstPoint = new GetFirstPoint(coreObj);
+            //OptionToggle splitOpt = getFirstPoint.SplitOpt;
+            //getFirstPoint.AddOptionToggle("Split", ref splitOpt);
             GetResult rsFpt = getFirstPoint.Get();
             if (rsFpt != GetResult.Point) // !Mouse Down
             {
