@@ -1,7 +1,6 @@
 ﻿using Rhino;
 using Rhino.Commands;
 using Rhino.Input;
-using Rhino.Input.Custom;
 
 namespace MultiCut
 {
@@ -16,7 +15,7 @@ namespace MultiCut
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public static MultiCutCommand Instance { get; private set; }
         public override string EnglishName => "mct";
-        
+
         #endregion
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
@@ -28,23 +27,40 @@ namespace MultiCut
             }
             
             GetFirstPoint getFirstPoint = new GetFirstPoint(coreObj);
-            //OptionToggle splitOpt = getFirstPoint.SplitOpt;
-            //getFirstPoint.AddOptionToggle("Split", ref splitOpt);
-            GetResult rsFpt = getFirstPoint.Get();
-            if (rsFpt != GetResult.Point) // !Mouse Down
+
+            
+            while (true)
             {
+                GetResult rsFpt = getFirstPoint.Get();
+
                 if (rsFpt == GetResult.Nothing) // Press Enter
                 {
                     coreObj.CutOperation();
                     doc.Views.Redraw();
                     return Result.Success;
-                } 
+                }
+                if (rsFpt == GetResult.Point)
+                {
+                    break;
+                }
+                if (rsFpt == GetResult.Option)
+                {
+                    if (PreferenceCommand.Instance.FromObj != null)
+                    {
+                        SplitCheck.Instance.Checked = getFirstPoint.SplitOpt.CurrentValue;
+                    }
+                    else
+                    {
+                        MultiCutPlugin.Instance.Settings.SetBool(SettingKey.General_SplitCheck, getFirstPoint.SplitOpt.CurrentValue);
+                    }
+                }
                 else // Press ESC
                 {
                     RhinoApp.WriteLine("Command EXIT");
                     return Result.Cancel;
                 }
             }
+            
             
             while (true)
             {
@@ -95,7 +111,7 @@ namespace MultiCut
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public static PreferenceCommand Instance { get; private set; }
         public override string EnglishName => "mcp";
-        private PreferenceForm FromObj { get; set; }
+        public PreferenceForm FromObj { get; set; }
 
         #endregion
 

@@ -986,7 +986,7 @@ namespace MultiCut
         private void SwitchTitle()
         {
             this.Text = MethodCollection.SafeCast(this.Checked)
-                ? "Split if possible"
+                ? "Split When Possible"
                 : "Keep Brep joined";
         }
 

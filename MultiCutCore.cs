@@ -786,10 +786,10 @@ namespace MultiCut
     {
         protected Core coreObj;
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
-        protected MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
-        //protected OptionToggle SplitOpt { get; }
-        protected OptionToggle APOpt { get; }
-        protected OptionInteger APInt { get; }
+        private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
+        public OptionToggle SplitOpt { get; }
+        private OptionToggle APOpt { get; }
+        private OptionInteger APInt { get; }
 
         protected GetPointTemplate(Core coreobjPassed)
         {
@@ -806,6 +806,12 @@ namespace MultiCut
                 2,
                 20);
 
+            this.SplitOpt = new OptionToggle(McPlugin.Settings.GetBool(SettingKey.General_SplitCheck), 
+                "KeepBrepJoined",
+                "SplitWhenPossible");
+            OptionToggle splitOptTemp = this.SplitOpt;
+            this.AddOptionToggle("Split", ref splitOptTemp);
+            this.SplitOpt = splitOptTemp;
         }
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
@@ -851,14 +857,7 @@ namespace MultiCut
         {
             coreObj = coreobjPassed;
             this.SetCommandPrompt("Pick the first point, or press ENTER to finish cut");
-            
-            OptionToggle splitOptTemp = new OptionToggle(McPlugin.Settings.GetBool(SettingKey.General_SplitCheck), 
-                "Keep Brep Joined",
-                "Split if possible");
 
-            this.AddOptionToggle("Split", ref splitOptTemp);
-            SplitCheck.Instance.Checked = splitOptTemp.CurrentValue;
-            
         }
     }
 

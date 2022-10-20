@@ -10,12 +10,15 @@
 
   <ItemGroup>
     <EmbeddedResource Include="EmbeddedResources\**\*" />
+    <EmbeddedResource Remove="test\**" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="bin\**" />
     <EmbeddedResource Remove="bin\**" />
     <None Remove="bin\**" />
+    <Compile Remove="test\**" />
+    <None Remove="test\**" />
   </ItemGroup>
   
   <ItemGroup>
