@@ -210,7 +210,21 @@ namespace MultiCut
         }
 
         #endregion
+        #region Command Method
 
+        public static void SyncSplitCheck(GetPointTemplate gp)
+        {
+            if (PreferenceCommand.Instance.FromObj != null)
+            {
+                SplitCheck.Instance.Checked = gp.SplitOpt.CurrentValue;
+            }
+            else
+            {
+                MultiCutPlugin.Instance.Settings.SetBool(SettingKey.General_SplitCheck, gp.SplitOpt.CurrentValue);
+            }
+        }
+
+        #endregion
     }
 
     public class Core

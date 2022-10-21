@@ -27,7 +27,6 @@ namespace MultiCut
             }
             
             GetFirstPoint getFirstPoint = new GetFirstPoint(coreObj);
-
             
             while (true)
             {
@@ -45,14 +44,7 @@ namespace MultiCut
                 }
                 if (rsFpt == GetResult.Option)
                 {
-                    if (PreferenceCommand.Instance.FromObj != null)
-                    {
-                        SplitCheck.Instance.Checked = getFirstPoint.SplitOpt.CurrentValue;
-                    }
-                    else
-                    {
-                        MultiCutPlugin.Instance.Settings.SetBool(SettingKey.General_SplitCheck, getFirstPoint.SplitOpt.CurrentValue);
-                    }
+                    MethodCollection.SyncSplitCheck(getFirstPoint);
                 }
                 else // Press ESC
                 {
@@ -60,9 +52,9 @@ namespace MultiCut
                     return Result.Cancel;
                 }
             }
-            
-            
-            while (true)
+
+            bool breakLoop = true;
+            while (breakLoop)
             {
                 int ptCollectedCount = coreObj.OnLoopList.Count;
                 if (ptCollectedCount >= 2)
@@ -74,19 +66,29 @@ namespace MultiCut
                 }
                 
                 GetNextPoint getNextPoint = new GetNextPoint(coreObj);
-                GetResult rsNextPt = getNextPoint.Get();
-                if (rsNextPt != GetResult.Point) // !Mouse Down
+                while (true)
                 {
-                    if (rsNextPt == GetResult.Nothing) // Press Enter
+                    GetResult rsNextPt = getNextPoint.Get();
+                    if (rsNextPt == GetResult.Point) // !Mouse Down
                     {
                         break;
-                    } 
+                    }
+                    if (rsNextPt == GetResult.Nothing) // Press Enter
+                    {
+                        breakLoop = false;
+                        break;
+                    }
+                    if (rsNextPt == GetResult.Option)
+                    {
+                        MethodCollection.SyncSplitCheck(getNextPoint);
+                    }
                     else // Press ESC
                     {
                         RhinoApp.WriteLine("Command EXIT");
                         return Result.Cancel;
                     }
                 }
+
 
             }
 
