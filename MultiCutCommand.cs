@@ -69,7 +69,7 @@ namespace MultiCut
                 while (true)
                 {
                     GetResult rsNextPt = getNextPoint.Get();
-                    if (rsNextPt == GetResult.Point) // !Mouse Down
+                    if (rsNextPt == GetResult.Point) 
                     {
                         break;
                     }

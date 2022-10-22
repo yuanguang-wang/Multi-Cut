@@ -214,14 +214,10 @@ namespace MultiCut
 
         public static void SyncSplitCheck(GetPointTemplate gp)
         {
-            if (PreferenceCommand.Instance.FromObj != null)
-            {
-                SplitCheck.Instance.Checked = gp.SplitOpt.CurrentValue;
-            }
-            else
-            {
-                MultiCutPlugin.Instance.Settings.SetBool(SettingKey.General_SplitCheck, gp.SplitOpt.CurrentValue);
-            }
+            bool value = gp.SplitOpt.CurrentValue;
+            SplitCheck.Instance.Checked = value;
+            MultiCutPreference.Instance.IsSplitEnabled = value;
+            MultiCutPlugin.Instance.Settings.SetBool(SettingKey.General_SplitCheck,value);
         }
 
         #endregion
