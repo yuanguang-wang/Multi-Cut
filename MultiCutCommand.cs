@@ -44,7 +44,7 @@ namespace MultiCut
                 }
                 if (rsFpt == GetResult.Option)
                 {
-                    MethodCollection.SyncSplitCheck(getFirstPoint);
+                    MethodCollection.SyncCommandOpt(getFirstPoint);
                 }
                 else // Press ESC
                 {
@@ -80,7 +80,7 @@ namespace MultiCut
                     }
                     if (rsNextPt == GetResult.Option)
                     {
-                        MethodCollection.SyncSplitCheck(getNextPoint);
+                        MethodCollection.SyncCommandOpt(getNextPoint);
                     }
                     else // Press ESC
                     {

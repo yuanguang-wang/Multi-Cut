@@ -212,12 +212,22 @@ namespace MultiCut
         #endregion
         #region Command Method
 
-        public static void SyncSplitCheck(GetPointTemplate gp)
+        public static void SyncCommandOpt(GetPointTemplate gp)
         {
-            bool value = gp.SplitOpt.CurrentValue;
-            SplitCheck.Instance.Checked = value;
-            MultiCutPreference.Instance.IsSplitEnabled = value;
-            MultiCutPlugin.Instance.Settings.SetBool(SettingKey.General_SplitCheck,value);
+            bool splitValue = gp.SplitOpt.CurrentValue;
+            SplitCheck.Instance.Checked = splitValue;
+            MultiCutPreference.Instance.IsSplitEnabled = splitValue;
+            MultiCutPlugin.Instance.Settings.SetBool(SettingKey.General_SplitCheck,splitValue);
+
+            bool enableValue = gp.APOpt.CurrentValue;
+            APEnableCheck.Instance.Checked = enableValue;
+            MultiCutPreference.Instance.IsPointEnabled = enableValue;
+            MultiCutPlugin.Instance.Settings.SetBool(SettingKey.AssistantPoint_EnableCheck, enableValue);
+
+            int selectedIndex = gp.APInt.CurrentValue - 2;
+            APDropDown.Instance.SelectedIndex = selectedIndex;
+            MultiCutPreference.Instance.PointNumber = selectedIndex + 2;
+            MultiCutPlugin.Instance.Settings.SetInteger(SettingKey.AssistantPoint_PointNumber, selectedIndex);
         }
 
         #endregion
@@ -798,8 +808,8 @@ namespace MultiCut
         protected MultiCutPreference McPref => MultiCutPreference.Instance;
         private MultiCutPlugin McPlugin => MultiCutPlugin.Instance;
         public OptionToggle SplitOpt { get; }
-        private OptionToggle APOpt { get; }
-        private OptionInteger APInt { get; }
+        public OptionToggle APOpt { get; }
+        public OptionInteger APInt { get; }
 
         protected GetPointTemplate(Core coreobjPassed)
         {
@@ -808,20 +818,27 @@ namespace MultiCut
             this.PermitElevatorMode(0);
             this.AcceptNothing(true);
             
-
-            this.APOpt = new OptionToggle(McPlugin.Settings.GetBool(SettingKey.AssistantPoint_EnableCheck), 
-                "Disable",
-                "Enable");
-            this.APInt = new OptionInteger(McPlugin.Settings.GetInteger(SettingKey.AssistantPoint_PointNumber) + 2, 
-                2,
-                20);
-
             this.SplitOpt = new OptionToggle(McPlugin.Settings.GetBool(SettingKey.General_SplitCheck), 
                 "KeepBrepJoined",
                 "SplitWhenPossible");
             OptionToggle splitOptTemp = this.SplitOpt;
             this.AddOptionToggle("Split", ref splitOptTemp);
             this.SplitOpt = splitOptTemp;
+            
+            this.APOpt = new OptionToggle(McPlugin.Settings.GetBool(SettingKey.AssistantPoint_EnableCheck), 
+                "Disable",
+                "Enable");
+            OptionToggle apEnableTemp = this.APOpt;
+            this.AddOptionToggle("AssistantPoint", ref apEnableTemp);
+            this.APOpt = apEnableTemp;
+            
+            this.APInt = new OptionInteger(McPlugin.Settings.GetInteger(SettingKey.AssistantPoint_PointNumber) + 2, 
+                2,
+                20);
+            OptionInteger apIntTemp = this.APInt;
+            this.AddOptionInteger("Division", ref apIntTemp);
+            this.APInt = apIntTemp;
+            
         }
 
         protected override void OnMouseMove(GetPointMouseEventArgs e)
