@@ -9,33 +9,13 @@ using Eto.Forms;
 using Rhino.DocObjects;
 using Rhino.UI;
 
-
 namespace MultiCut
 {
-    
     internal static class MethodCollection
     {
 
         #region Core Method
         
-        public static int RemapInt(int slideNum)
-        {
-            int reMappedInt;
-            if (0 < slideNum & slideNum < 10)
-            {
-                reMappedInt = slideNum;
-            }
-            else if (slideNum >= 10)
-            {
-                reMappedInt = 10;
-            }
-            else
-            {
-                reMappedInt = 1;
-            }
-            return reMappedInt;
-        }
-
         public static bool ObjectCollecter(out Brep brep2BPassed, out ObjRef brepRef2BPassed)
         {
             brep2BPassed = null;
@@ -166,7 +146,27 @@ namespace MultiCut
             }
             return faceIndexList;
         }
-        
+
+        public static System.Drawing.Color ColorDesaturate(System.Drawing.Color color)
+        {
+            byte R = color.R;
+            byte G = color.G;
+            byte B = color.B;
+            color.GetSaturation();
+            System.Drawing.Color newColor = System.Drawing.Color.FromArgb(ByteConvert(R), ByteConvert(G), ByteConvert(B));
+            return newColor;
+        }
+
+        private static int ByteConvert(byte original)
+        {
+            int value = original + 100;
+            if (value > 255)
+            {
+                value = 255;
+            }
+            return value;
+        }
+
         #endregion
         #region Preference Method
 
@@ -871,6 +871,13 @@ namespace MultiCut
             {
                 this.AddConstructionPoints(coreObj.AssistPtList);
                 e.Display.DrawPoints(coreObj.AssistPtList, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, McPref.PointColor);
+                int i = 0;
+                foreach (Point3d pt in coreObj.AssistPtList)
+                {
+                    string serialNum = i + "/" + (coreObj.AssistPtList.Length - 1);
+                    e.Display.Draw2dText(serialNum, McPref.PointColor,pt, false,16);
+                    i++;
+                }
             }
             
             e.Display.DrawPoint(coreObj.CurrentPt, Rhino.Display.PointStyle.RoundControlPoint, McPref.PointSize, System.Drawing.Color.Black);
@@ -931,7 +938,7 @@ namespace MultiCut
             
             foreach (Curve crv in coreObj.OctopusArmStocker)
             {
-                e.Display.DrawCurve(crv, System.Drawing.Color.CornflowerBlue,  this.McPref.OctopusWidth);
+                e.Display.DrawCurve(crv, MethodCollection.ColorDesaturate(this.McPref.OctopusColor),  this.McPref.OctopusWidth);
             }
 
         }
@@ -941,9 +948,5 @@ namespace MultiCut
     {
         _ISOU, _ISOV, _CPLX, _CPLY, _CPLZ, _WPLX, _WPLY, _WPLZ
     }
-
-
-    
-
 
 }
