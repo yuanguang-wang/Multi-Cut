@@ -756,8 +756,11 @@ namespace MultiCut
                         RhinoApp.WriteLine("More than one brep is generated");
                         foreach (Brep brep in tryJoinBrepArray)
                         {
-                            this.currentDoc.Objects.Add(brep);
+                            RhinoObject brepObj = this.baseBrepRef.Object();
+                            ObjectAttributes BrepAttr = brepObj.Attributes;
+                            this.currentDoc.Objects.AddBrep(brep, BrepAttr);
                         }
+                        this.currentDoc.Objects.Delete(this.baseBrepRef.Object());
                     }
                 }
             }
