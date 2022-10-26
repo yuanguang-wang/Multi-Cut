@@ -734,11 +734,16 @@ namespace MultiCut
             {
                 if (this.McPref.IsSplitEnabled)
                 {
-                    RhinoApp.WriteLine("Brep splitted");
+                    RhinoApp.WriteLine("-------------");
+                    RhinoApp.WriteLine("Brep Splitted");
+                    RhinoApp.WriteLine("-------------");
                     foreach (Brep brep in newBrepArray)
                     {
-                        this.currentDoc.Objects.Add(brep);
+                        RhinoObject brepObj = this.baseBrepRef.Object();
+                        ObjectAttributes BrepAttr = brepObj.Attributes;
+                        this.currentDoc.Objects.AddBrep(brep, BrepAttr);
                     }
+                    this.currentDoc.Objects.Delete(this.baseBrepRef.Object());
                 }
                 else
                 {
