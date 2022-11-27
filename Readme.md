@@ -8,7 +8,7 @@ Rhino 7.0 and later, Windows 10/11. <br/>
 Support MacOS partly*.<br/>
 ### - Tutorial
 Here is a youtube video about how to use this plugin if you don't want to read the heavy text below.<br/>
-[《 Manual of the Multi-Cut Plugin for Rhino 》](https://youtu.be/dQw4w9WgXcQ)
+[{Manual of the Multi-Cut Plugin for Rhino}](https://youtu.be/dQw4w9WgXcQ)
 
 ## Instillation
 ### - via Package Manager
@@ -21,7 +21,7 @@ Here is a youtube video about how to use this plugin if you don't want to read t
 ### - via Food4Rhino
 Click the link below to download via food4rhino:
 <br/>
-[https://www.food4rhino.com/en/app/deviant-inspector](https://www.food4rhino.com/en/app/deviant-inspector)
+[https://www.food4rhino.com/en/app/multi-cut](https://www.food4rhino.com/en/app/multi-cut)
 <br/>
 <br/>
 
