@@ -14,7 +14,7 @@ Here is a youtube video about how to use this plugin if you don't want to read t
 ### - via Package Manager
 - Open *Rhino*
 - In the Command Window, type the command ```PackageManager```
-- In the popped up *Package Manager* window, search ***Multi-Cut***
+- In the popped up *Package Manager* window, search ***MultiCut***
 - Click Install
 - Restart Rhino
 
