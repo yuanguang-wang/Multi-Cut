@@ -106,40 +106,49 @@ namespace MultiCut
             
             this.IsProphetEnabled = this.LoadBoolSetting(SettingKey.PredictionLine_EnableCheck, PlugInSettings, true);
             this.IsPriorityEnabled = this.LoadBoolSetting(SettingKey.PredictionLine_PriorityCheck, PlugInSettings, true);
+            
             this.LoadBoolSetting(SettingKey.PredictionLine_ColorCheck, PlugInSettings, false);
+            System.Drawing.Color dbPLColor = this.LoadColorSetting(SettingKey.PredictionLine_ColorPick, PlugInSettings, this.defaultProphetColor.ToSystemDrawing());
             this.ProphetColor = McPlugin.Settings.GetBool(SettingKey.PredictionLine_ColorCheck)
-                ? this.LoadColorSetting(SettingKey.PredictionLine_ColorPick, PlugInSettings, 
-                this.defaultProphetColor.ToSystemDrawing())
+                ? dbPLColor
                 : this.defaultProphetColor.ToSystemDrawing();
+            
             this.LoadBoolSetting(SettingKey.PredictionLine_WidthCheck, PlugInSettings, false);
+            int dbPLWidth = this.LoadIntSetting(SettingKey.PredictionLine_WidthDropDown, PlugInSettings, 2);
             this.ProphetWidth = McPlugin.Settings.GetBool(SettingKey.PredictionLine_WidthCheck)
-                ? this.LoadIntSetting(SettingKey.PredictionLine_WidthDropDown, PlugInSettings, 2) + 1
+                ?  dbPLWidth + 1
                 : this.defaultLineWidth;
             
             this.IsOctopusEnabled = this.LoadBoolSetting(SettingKey.OctopusLine_EnableCheck, PlugInSettings, true);
             this.IsIsoChecked = this.LoadBoolSetting(SettingKey.OctopusLine_ISOCheck, PlugInSettings, true);
             this.IsCplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_CPLCheck, PlugInSettings, true);
             this.IsWplChecked = this.LoadBoolSetting(SettingKey.OctopusLine_WPLCheck, PlugInSettings, true);
+            
             this.LoadBoolSetting(SettingKey.OctopusLine_ColorCheck, PlugInSettings, false);
+            System.Drawing.Color dbOctopusColor = this.LoadColorSetting(SettingKey.OctopusLine_ColorPick, PlugInSettings, this.defaultOctopusColor.ToSystemDrawing());
             this.OctopusColor = McPlugin.Settings.GetBool(SettingKey.OctopusLine_ColorCheck)
-                ? this.LoadColorSetting(SettingKey.OctopusLine_ColorPick, PlugInSettings,
-                this.defaultOctopusColor.ToSystemDrawing())
+                ? dbOctopusColor
                 : this.defaultOctopusColor.ToSystemDrawing();
+            
             this.LoadBoolSetting(SettingKey.OctopusLine_WidthCheck, PlugInSettings, false);
+            int dbOctopusWidth = this.LoadIntSetting(SettingKey.OctopusLine_WidthDropDown, PlugInSettings, 2);
             this.OctopusWidth = McPlugin.Settings.GetBool(SettingKey.OctopusLine_WidthCheck)
-                ? this.LoadIntSetting(SettingKey.OctopusLine_WidthDropDown, PlugInSettings, 2) + 1
+                ? dbOctopusWidth + 1
                 : this.defaultLineWidth;
             
             this.IsPointEnabled = this.LoadBoolSetting(SettingKey.AssistantPoint_EnableCheck, PlugInSettings, false);
             this.PointNumber = this.LoadIntSetting(SettingKey.AssistantPoint_PointNumber, PlugInSettings, 3) + 2;
+            
             this.LoadBoolSetting(SettingKey.AssistantPoint_ColorCheck, PlugInSettings, false);
+            System.Drawing.Color dbAPColor = this.LoadColorSetting(SettingKey.AssistantPoint_ColorPick, PlugInSettings, this.defaultPointColor.ToSystemDrawing());
             this.PointColor = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_ColorCheck)
-                ? this.LoadColorSetting(SettingKey.AssistantPoint_ColorPick, PlugInSettings,
-                this.defaultPointColor.ToSystemDrawing())
+                ? dbAPColor 
                 : this.defaultPointColor.ToSystemDrawing();
+            
             this.LoadBoolSetting(SettingKey.AssistantPoint_SizeCheck, PlugInSettings, false);
+            int dbAPSize = this.LoadIntSetting(SettingKey.AssistantPoint_SizeDropDown, PlugInSettings, 2);
             this.PointSize = McPlugin.Settings.GetBool(SettingKey.AssistantPoint_SizeCheck)
-                ? this.LoadIntSetting(SettingKey.AssistantPoint_SizeDropDown, PlugInSettings, 2) + 1
+                ? dbAPSize + 1
                 : this.defaultPointSize;
         }
         
@@ -177,7 +186,7 @@ namespace MultiCut
             this.PreferenceLayout.Spacing = new Size(10,10);
             
             IEnumerable<GroupBox> controls_1 = new GroupBox[] { this.General, this.About, this.OctopusLine };
-            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.AssistantPoint, this.PredictionLine };
+            IEnumerable<GroupBox> controls_2 = new GroupBox[] { this.PredictionLine, this.AssistantPoint};
             
             this.PreferenceLayout.BeginHorizontal();
             this.PreferenceLayout.AddSeparateColumn(new Padding(10,10,5,10), 10, false, false, controls_1);
@@ -239,7 +248,7 @@ namespace MultiCut
             // Git Link //
             this.GitHubLabel = new Label() { Text = "Documentation on:" };
             this.GithubLink = new LinkButton();
-            this.GithubLink.Text = "Github/yuanguang-wang";
+            this.GithubLink.Text = "github.com/yuanguang-wang";
             this.GithubLink.Click += (sender, args) =>
             {
                 PythonScript ps = PythonScript.Create();
@@ -859,7 +868,7 @@ namespace MultiCut
         private void SwitchTitle()
         {
             bool value = MethodCollection.SafeCast(this.Checked);
-            this.Text = value ? "Prediction Line" : "Assistant Line";
+            this.Text = value ? "By Prediction Line" : "By Assistant Line";
         }
 
         protected override void OnLoad(EventArgs e)

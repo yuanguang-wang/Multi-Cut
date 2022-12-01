@@ -113,27 +113,27 @@ namespace MultiCut
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public static PreferenceCommand Instance { get; private set; }
         public override string EnglishName => "mcp";
-        public PreferenceForm FromObj { get; set; }
+        public PreferenceForm FormObj { get; set; }
 
         #endregion
 
         protected override Result RunCommand(RhinoDoc doc, RunMode mode)
         {
-            if (this.FromObj == null)
+            if (this.FormObj == null)
             {
-                this.FromObj = new PreferenceForm();
-                this.FromObj.Closed += (sender, args) =>
+                this.FormObj = new PreferenceForm();
+                this.FormObj.Closed += (sender, args) =>
                 {
-                    this.FromObj.Dispose();
-                    this.FromObj = null;
+                    this.FormObj.Dispose();
+                    this.FormObj = null;
                 };
-                this.FromObj.Show();
+                this.FormObj.Show();
             }
             else
             {
                 RhinoApp.WriteLine("Multi-Cut Preference Window has already opened.");
             }
-            
+
             return Result.Success;
         }
     }
