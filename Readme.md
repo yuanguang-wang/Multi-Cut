@@ -21,7 +21,7 @@ Here is a youtube video about how to use this plugin if you don't want to read t
 ### - via Food4Rhino
 Click the link below to download via food4rhino:
 <br/>
-[https://www.food4rhino.com/en/app/multi-cut](https://www.food4rhino.com/en/app/multi-cut)
+[https://www.food4rhino.com/en/app/multicut](https://www.food4rhino.com/en/app/multicut)
 <br/>
 <br/>
 
