@@ -8,7 +8,7 @@ Rhino 7.0 and later, Windows 10/11. <br/>
 Support MacOS partly*.<br/>
 ### - Tutorial
 Here is a youtube video about how to use this plugin if you don't want to read the heavy text below.<br/>
-[{Manual of the Multi-Cut Plugin for Rhino}](https://youtu.be/dQw4w9WgXcQ)
+[{Manual of the Multi-Cut Plugin for Rhino}](https://youtu.be/FhcvRcF8iyw)
 
 ## Instillation
 ### - via Package Manager
@@ -101,13 +101,7 @@ If not designated, the default color is set by the Plugin's built in settings, a
 
 ## Epilogue
 About macOS compatibility, the Plugin never tested on macOS, but the ```mct``` command should work smoothly, and the ```mcp``` command will not work, so called "works on macOS partly".
-<br/>
-And one more thing...
-<br/>
-Indeed, when texts are somehow not easy to understand, here is a video tutorial of this Plugin. Take it easy, you won't get rick rolled this time.
-<br/>
-[{Manual of the Multi-Cut Plugin for Rhino}](https://youtu.be/dQw4w9WgXcQ)
-<br/>
+
 Enjoy!
 
 
